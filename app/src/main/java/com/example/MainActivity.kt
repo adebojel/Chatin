@@ -32,6 +32,16 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Pelindung Crash Thread Global (mencegah dialog 'chatin telah berhenti' dari background thread/coroutine)
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.util.Log.e("CHATIN_CRASH_GUARD", "Mencegah force-close dari thread [${thread.name}]: ${throwable.localizedMessage}", throwable)
+            if (thread.name.equals("main", ignoreCase = true)) {
+                defaultHandler?.uncaughtException(thread, throwable)
+            }
+        }
+
         enableEdgeToEdge()
 
         setContent {

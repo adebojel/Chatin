@@ -131,7 +131,7 @@ fun ChangePhoneNumberDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text("Nomor Telepon Saat Ini:", fontSize = 11.sp, color = Color.White.copy(alpha = 0.6f))
-                            Text(user?.phoneNumber ?: "+62 812-3456-7890", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(user?.phoneNumber?.ifBlank { "-" } ?: "-", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -232,7 +232,23 @@ fun ChangePhoneNumberDialog(
                         color = Color(0xFF10B981),
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    val extractedOtp = remember(infoMessage) {
+                        infoMessage?.let { msg ->
+                            Regex("\\b\\d{6}\\b").find(msg)?.value
+                        }
+                    }
+
+                    if (extractedOtp != null && otpInput.isEmpty()) {
+                        AssistChip(
+                            onClick = { otpInput = extractedOtp },
+                            label = { Text("Tempel Kode OTP: $extractedOtp", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            leadingIcon = { Icon(Icons.Default.ContentPaste, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp)) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFF00E5FF).copy(alpha = 0.15f)),
+                            modifier = Modifier.padding(bottom = 10.dp)
+                        )
+                    }
 
                     OutlinedTextField(
                         value = otpInput,

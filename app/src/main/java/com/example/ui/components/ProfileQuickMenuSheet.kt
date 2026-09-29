@@ -168,7 +168,7 @@ fun ProfileQuickMenuSheet(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
-                                        text = user?.displayName ?: "Pengguna Chatin",
+                                        text = user?.displayName?.ifBlank { user.phoneNumber } ?: "",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
                                         color = Color.White
@@ -264,7 +264,7 @@ fun ProfileQuickMenuSheet(
                             icon = Icons.Default.Badge,
                             iconColor = Color(0xFF38BDF8),
                             title = "Ganti Nama",
-                            subtitle = user?.displayName ?: "Pengguna Chatin",
+                            subtitle = user?.displayName?.ifBlank { user.phoneNumber } ?: "",
                             onClick = {
                                 onEditName()
                                 onDismiss()

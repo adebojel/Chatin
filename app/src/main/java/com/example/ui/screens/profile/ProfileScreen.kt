@@ -75,7 +75,7 @@ fun ProfileScreen(
     ) { uri: Uri? ->
         if (uri != null) {
             onUpdateProfile(
-                user?.displayName ?: "Pengguna Chatin",
+                user?.displayName ?: "",
                 user?.bio ?: "Ada di Chatin • Komunikasi aman All-in-One",
                 uri.toString()
             )
@@ -207,7 +207,7 @@ fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = user?.displayName ?: "Pengguna Chatin",
+                                text = user?.displayName?.ifBlank { user.phoneNumber } ?: "",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 17.sp,
                                 color = Color.White
@@ -223,7 +223,7 @@ fun ProfileScreen(
                             }
                         }
                         Text(
-                            text = "${user?.username ?: "@user"} • ${user?.phoneNumber ?: ""}",
+                            text = user?.phoneNumber ?: "",
                             fontSize = 12.sp,
                             color = Color(0xFF00E5FF)
                         )
@@ -289,7 +289,7 @@ fun ProfileScreen(
                     icon = Icons.Default.Badge,
                     iconColor = Color(0xFF00E5FF),
                     title = "Ganti Nama Akun",
-                    subtitle = user?.displayName ?: "Pengguna Chatin",
+                    subtitle = user?.displayName?.ifBlank { user.phoneNumber } ?: "",
                     onClick = {
                         nameInput = user?.displayName ?: ""
                         showEditNameDialog = true

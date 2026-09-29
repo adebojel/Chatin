@@ -202,7 +202,7 @@ fun CloudSyncDialog(
                                 ) {
                                     Column {
                                         Text(
-                                            text = user?.displayName ?: "Pengguna Chatin",
+                                            text = user?.displayName?.ifBlank { user.phoneNumber } ?: "",
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White

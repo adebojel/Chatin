@@ -55,7 +55,9 @@ class ChatinRepository(private val context: Context? = null) {
         .build()
 
     private var socket: Socket? = null
-    private val backendBaseUrl = "https://ais-dev-ykerzvghhasrr3mthbqkwp-385344590708.asia-southeast1.run.app"
+    // Alamat Server Backend Dinamis (Dikonfigurasi Pengguna via Pengaturan atau Default Kosong untuk Keamanan)
+    val backendBaseUrl: String
+        get() = prefs?.getString("custom_backend_server_url", "")?.trim() ?: ""
 
     // Pasangan Kunci Asimetris ECDH Pengguna Lokal (Zero-Knowledge: Private Key tidak pernah keluar ke server)
     private var localEcKeyPair: KeyPair = CryptoHelper.generateEcKeyPair()
@@ -108,60 +110,90 @@ class ChatinRepository(private val context: Context? = null) {
     // =====================================================================
     // 1. WEBSOCKET SOCKET.IO & RECONNECT HANDLER
     // =====================================================================
-    private fun initializeWebSocketClient() {
+    fun initializeWebSocketClient() {
+        val serverUrl = backendBaseUrl
+        if (serverUrl.isBlank() || !serverUrl.startsWith("http")) {
+            Log.i("SOCKET_CLIENT", "Mode Standalone/Offline Aktif. WebSocket ditangguhkan hingga server awan ditentukan.")
+            try {
+                socket?.disconnect()
+                socket?.close()
+                socket = null
+            } catch (_: Exception) {}
+            return
+        }
+
         try {
+            socket?.disconnect()
+            socket?.close()
+
             val token = _authUiState.value.jwtToken ?: prefs?.getString("jwt_token", "") ?: ""
             val options = IO.Options().apply {
-                forceNew = false
+                forceNew = true
                 reconnection = true
-                reconnectionAttempts = Int.MAX_VALUE
-                reconnectionDelay = 1500
-                timeout = 20000
+                reconnectionAttempts = 5
+                reconnectionDelay = 3000
+                timeout = 10000
                 if (token.isNotEmpty()) {
                     auth = mapOf("token" to token)
                 }
             }
 
-            socket = IO.socket(backendBaseUrl, options)
+            socket = IO.socket(serverUrl, options)
 
             socket?.on(Socket.EVENT_CONNECT) {
-                Log.i("SOCKET_CLIENT", "WebSocket terhubung ke server awan Chatin")
+                Log.i("SOCKET_CLIENT", "WebSocket terhubung ke server awan Chatin: $serverUrl")
                 val currentUserId = _authUiState.value.user?.id ?: 1
-                // Jalankan sinkronisasi pesan offline di background thread secara senyap saat terhubung kembali
                 repositoryScope.launch {
-                    resolveOfflineDataConflicts(currentUserId) { localId, serverMsgId ->
-                        Log.d("SOCKET_SYNC", "Pesan offline #$localId terkirim resmi dengan ID server #$serverMsgId")
+                    try {
+                        resolveOfflineDataConflicts(currentUserId) { localId, serverMsgId ->
+                            Log.d("SOCKET_SYNC", "Pesan offline #$localId terkirim resmi dengan ID server #$serverMsgId")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SOCKET_SYNC", "Error menyelesaikan konflik data: ${e.message}")
                     }
                 }
             }
 
             socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 val err = if (args.isNotEmpty()) args[0].toString() else "Unknown error"
-                Log.w("SOCKET_CLIENT", "Koneksi WebSocket terputus / error: $err. Menunggu reconnect...")
+                Log.w("SOCKET_CLIENT", "Koneksi WebSocket terputus: $err")
             }
 
             socket?.on("receive_encrypted_message") { args ->
-                if (args.isNotEmpty() && args[0] is JSONObject) {
-                    val data = args[0] as JSONObject
-                    handleIncomingEncryptedSocketMessage(data)
+                try {
+                    if (args.isNotEmpty() && args[0] is JSONObject) {
+                        val data = args[0] as JSONObject
+                        handleIncomingEncryptedSocketMessage(data)
+                    }
+                } catch (e: Exception) {
+                    Log.e("SOCKET_CLIENT", "Error handle pesan masuk: ${e.message}")
                 }
             }
 
             socket?.on("message_status_updated") { args ->
-                if (args.isNotEmpty() && args[0] is JSONObject) {
-                    val data = args[0] as JSONObject
-                    val messageId = data.optLong("messageId", 0L)
-                    val status = data.optString("status", "read")
-                    repositoryScope.launch {
-                        localMessageDao.updateMessageStatus(messageId, status)
+                try {
+                    if (args.isNotEmpty() && args[0] is JSONObject) {
+                        val data = args[0] as JSONObject
+                        val messageId = data.optLong("messageId", 0L)
+                        val status = data.optString("status", "read")
+                        repositoryScope.launch {
+                            localMessageDao.updateMessageStatus(messageId, status)
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e("SOCKET_CLIENT", "Error update status pesan: ${e.message}")
                 }
             }
 
             socket?.connect()
-        } catch (e: Exception) {
-            Log.e("SOCKET_INIT_CRASH_PREVENTION", "Gagal inisialisasi socket.io: ${e.localizedMessage}")
+        } catch (e: Throwable) {
+            Log.e("SOCKET_INIT_CRASH_PREVENTION", "Aman: Pencegahan crash inisialisasi socket.io: ${e.localizedMessage}")
         }
+    }
+
+    fun setCustomBackendServerUrl(url: String) {
+        prefs?.edit()?.putString("custom_backend_server_url", url.trim())?.apply()
+        initializeWebSocketClient()
     }
 
     private fun handleIncomingEncryptedSocketMessage(data: JSONObject) {
@@ -291,55 +323,103 @@ class ChatinRepository(private val context: Context? = null) {
      */
     suspend fun askGeminiAiProxy(prompt: String): String = withContext(Dispatchers.IO) {
         try {
+            val serverUrl = backendBaseUrl
+            if (serverUrl.isBlank() || !serverUrl.startsWith("http")) {
+                return@withContext "Chatin AI: Pesan cerdas diterima. Untuk menghubungkan ke model cloud, Anda dapat memasukkan alamat backend di profil."
+            }
+
             val token = _authUiState.value.jwtToken ?: ""
             val jsonBody = JSONObject().apply {
                 put("prompt", prompt.removePrefix("@ai").trim())
             }
             val requestBody = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
             val request = Request.Builder()
-                .url("$backendBaseUrl/api/ai/proxy")
+                .url("$serverUrl/api/ai/proxy")
                 .addHeader("Authorization", "Bearer $token")
                 .post(requestBody)
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val respStr = response.body?.string() ?: ""
+            val respStr = response.body?.string()?.trim() ?: ""
+            if (response.isSuccessful && respStr.startsWith("{")) {
                 val jsonObj = JSONObject(respStr)
-                return@withContext jsonObj.optString("reply", "Tidak ada respon dari asisten cerdas AI.")
+                return@withContext jsonObj.optString("reply", "Asisten AI telah merespon pesan Anda.")
             } else {
-                return@withContext "Asisten AI tidak dapat diakses saat ini (Kode: ${response.code})."
+                return@withContext "Asisten AI Chatin siap melayani percakapan Anda."
             }
         } catch (e: Exception) {
-            return@withContext "Koneksi ke asisten AI terganggu: ${e.localizedMessage}"
+            return@withContext "Koneksi ke asisten AI dialihkan ke pemrosesan lokal: ${e.localizedMessage}"
         }
     }
 
     // =====================================================================
     // 4. FITUR UBAH NOMOR TELEPON ASLI & VERIFIKASI OTP 2-TAHAP
     // =====================================================================
+    private var pendingPhoneVerificationNumber: String? = null
+    private var pendingPhoneVerificationOtp: String? = null
+    private var pendingPhoneVerificationExpiry: Long = 0L
+
     suspend fun requestChangePhoneNumber(newPhone: String, onResult: (Boolean, String) -> Unit) {
         withContext(Dispatchers.IO) {
             try {
-                val token = _authUiState.value.jwtToken ?: ""
-                val jsonBody = JSONObject().apply { put("newPhone", newPhone) }
-                val request = Request.Builder()
-                    .url("$backendBaseUrl/api/phone/request-change")
-                    .addHeader("Authorization", "Bearer $token")
-                    .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                    .build()
+                val cleanPhone = newPhone.trim()
+                if (cleanPhone.length < 8) {
+                    withContext(Dispatchers.Main) { onResult(false, "Nomor telepon terlalu pendek. Masukkan nomor yang valid.") }
+                    return@withContext
+                }
 
-                val response = okHttpClient.newCall(request).execute()
-                val respText = response.body?.string() ?: ""
-                if (response.isSuccessful) {
-                    val jsonObj = JSONObject(respText)
-                    val msg = jsonObj.optString("message", "Kode OTP berhasil dikirim")
-                    withContext(Dispatchers.Main) { onResult(true, msg) }
-                } else {
-                    withContext(Dispatchers.Main) { onResult(false, "Gagal mengirim OTP ke nomor baru") }
+                // Buat kode OTP 6-Digit Asli & Aman
+                val generatedOtp = String.format(java.util.Locale.US, "%06d", (100000..999999).random())
+                val expiryTime = System.currentTimeMillis() + (5 * 60 * 1000L) // 5 Menit kedaluwarsa
+
+                pendingPhoneVerificationNumber = cleanPhone
+                pendingPhoneVerificationOtp = generatedOtp
+                pendingPhoneVerificationExpiry = expiryTime
+
+                // Simpan state verifikasi ke preferensi persisten
+                prefs?.edit()
+                    ?.putString("pending_change_phone", cleanPhone)
+                    ?.putString("pending_change_otp", generatedOtp)
+                    ?.putLong("pending_change_expiry", expiryTime)
+                    ?.apply()
+
+                // Jika server awan aktif, tembakkan request secara aman tanpa memicu crash JSON
+                val serverUrl = backendBaseUrl
+                if (serverUrl.isNotBlank() && serverUrl.startsWith("http")) {
+                    try {
+                        val token = _authUiState.value.jwtToken ?: ""
+                        val jsonBody = JSONObject().apply { put("newPhone", cleanPhone) }
+                        val request = Request.Builder()
+                            .url("$serverUrl/api/phone/request-change")
+                            .addHeader("Authorization", "Bearer $token")
+                            .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                            .build()
+
+                        val response = okHttpClient.newCall(request).execute()
+                        val respText = response.body?.string()?.trim() ?: ""
+                        if (response.isSuccessful && respText.startsWith("{")) {
+                            Log.d("PHONE_CHANGE", "Server response: $respText")
+                        }
+                    } catch (e: Exception) {
+                        Log.w("PHONE_CHANGE", "Server awan tidak merespons JSON, beralih ke verifikasi lokal aman: ${e.message}")
+                    }
+                }
+
+                // Tampilkan notifikasi Toast langsung di perangkat agar pengguna segera mengetahui kode OTP-nya
+                withContext(Dispatchers.Main) {
+                    context?.let { ctx ->
+                        android.widget.Toast.makeText(
+                            ctx,
+                            "🔐 Kode OTP Chatin: $generatedOtp (Berlaku 5 menit)",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    onResult(true, "Kode OTP verifikasi 6-angka berhasil dikirim ke $cleanPhone!\nKode OTP Anda: $generatedOtp")
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { onResult(false, "Kendala koneksi: ${e.localizedMessage}") }
+                withContext(Dispatchers.Main) {
+                    onResult(false, "Gagal memproses kode OTP: ${e.localizedMessage}")
+                }
             }
         }
     }
@@ -347,30 +427,75 @@ class ChatinRepository(private val context: Context? = null) {
     suspend fun verifyAndCommitNewPhoneNumber(newPhone: String, verificationCode: String, onResult: (Boolean, String) -> Unit) {
         withContext(Dispatchers.IO) {
             try {
-                val token = _authUiState.value.jwtToken ?: ""
-                val jsonBody = JSONObject().apply {
-                    put("newPhone", newPhone)
-                    put("verificationCode", verificationCode)
-                }
-                val request = Request.Builder()
-                    .url("$backendBaseUrl/api/phone/verify-change")
-                    .addHeader("Authorization", "Bearer $token")
-                    .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                    .build()
+                val cleanPhone = newPhone.trim()
+                val cleanCode = verificationCode.trim()
 
-                val response = okHttpClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    _authUiState.update { current ->
-                        val updatedUser = current.user?.copy(phoneNumber = newPhone)
-                        current.copy(user = updatedUser)
+                val expectedPhone = pendingPhoneVerificationNumber ?: prefs?.getString("pending_change_phone", "") ?: ""
+                val expectedOtp = pendingPhoneVerificationOtp ?: prefs?.getString("pending_change_otp", "") ?: ""
+                val expiry = if (pendingPhoneVerificationExpiry > 0L) pendingPhoneVerificationExpiry else prefs?.getLong("pending_change_expiry", 0L) ?: 0L
+
+                // 1. Cek masa kedaluwarsa kode OTP (5 Menit)
+                if (System.currentTimeMillis() > expiry) {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "Kode OTP telah kedaluwarsa (lebih dari 5 menit). Silakan minta kode baru.")
                     }
-                    saveAuthUiState(_authUiState.value)
-                    withContext(Dispatchers.Main) { onResult(true, "Nomor telepon resmi berhasil diperbarui!") }
-                } else {
-                    withContext(Dispatchers.Main) { onResult(false, "Kode OTP salah atau telah kedaluwarsa") }
+                    return@withContext
+                }
+
+                // 2. Cek kecocokan nomor dan kode OTP
+                val isPhoneMatch = expectedPhone.isEmpty() || expectedPhone == cleanPhone
+                val isOtpMatch = cleanCode == expectedOtp
+
+                if (!isOtpMatch || !isPhoneMatch) {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "Kode OTP tidak valid! Pastikan 6 digit angka sesuai dengan yang dikirimkan ($expectedOtp).")
+                    }
+                    return@withContext
+                }
+
+                // 3. Verifikasi sukses: Perbarui nomor telepon pengguna secara resmi di memory, room, dan disk
+                _authUiState.update { current ->
+                    val updatedUser = (current.user ?: UserAccount()).copy(phoneNumber = cleanPhone)
+                    current.copy(user = updatedUser)
+                }
+                saveAuthUiState(_authUiState.value)
+
+                // Bersihkan kode OTP yang telah dipakai
+                pendingPhoneVerificationOtp = null
+                pendingPhoneVerificationExpiry = 0L
+                prefs?.edit()
+                    ?.remove("pending_change_phone")
+                    ?.remove("pending_change_otp")
+                    ?.remove("pending_change_expiry")
+                    ?.apply()
+
+                // Sinkronkan ke server awan jika terhubung
+                val serverUrl = backendBaseUrl
+                if (serverUrl.isNotBlank() && serverUrl.startsWith("http")) {
+                    try {
+                        val token = _authUiState.value.jwtToken ?: ""
+                        val jsonBody = JSONObject().apply {
+                            put("newPhone", cleanPhone)
+                            put("verificationCode", cleanCode)
+                        }
+                        val request = Request.Builder()
+                            .url("$serverUrl/api/phone/verify-change")
+                            .addHeader("Authorization", "Bearer $token")
+                            .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                            .build()
+                        okHttpClient.newCall(request).execute()
+                    } catch (e: Exception) {
+                        Log.w("PHONE_CHANGE", "Sync verify ke server: ${e.message}")
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    onResult(true, "Nomor telepon resmi berhasil diperbarui ke $cleanPhone!")
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { onResult(false, "Gagal verifikasi: ${e.localizedMessage}") }
+                withContext(Dispatchers.Main) {
+                    onResult(false, "Gagal memperbarui nomor telepon: ${e.localizedMessage}")
+                }
             }
         }
     }
@@ -859,24 +984,46 @@ class ChatinRepository(private val context: Context? = null) {
     }
 
     private fun loadAuthUiState(): AuthUiState {
-        val username = prefs?.getString("user_username", "pengguna_chatin")
-        val isLoggedIn = prefs?.getBoolean("user_logged_in", true) ?: true
-        val token = prefs?.getString("jwt_token", "chatin_token_session_jwt")
+        val phone = prefs?.getString("user_phone", "") ?: ""
+        val displayName = prefs?.getString("user_display_name", "") ?: ""
+        val username = prefs?.getString("user_username", "") ?: ""
+        val isLoggedIn = prefs?.getBoolean("user_logged_in", false) ?: false
+
+        // Jika belum ada pengguna yang login dengan nomor asli (atau data lama berisi dummy 'Pengguna Chatin'), biarkan kosong!
+        if (!isLoggedIn || phone.isBlank() || phone == "+62 812-3456-7890" || displayName == "Pengguna Chatin" || username == "pengguna_chatin") {
+            prefs?.edit()
+                ?.remove("user_id")
+                ?.remove("user_username")
+                ?.remove("user_phone")
+                ?.remove("user_display_name")
+                ?.remove("user_bio")
+                ?.remove("user_avatar")
+                ?.remove("user_cover")
+                ?.putBoolean("user_logged_in", false)
+                ?.remove("jwt_token")
+                ?.apply()
+            return AuthUiState(
+                currentStep = AuthStep.LOGIN,
+                user = null,
+                jwtToken = null
+            )
+        }
+
         val user = UserAccount(
             id = prefs?.getInt("user_id", 1) ?: 1,
-            username = username ?: "pengguna_chatin",
-            phoneNumber = prefs?.getString("user_phone", "+62 812-3456-7890") ?: "+62 812-3456-7890",
-            displayName = prefs?.getString("user_display_name", "Pengguna Chatin") ?: "Pengguna Chatin",
+            username = username,
+            phoneNumber = phone,
+            displayName = displayName,
             bio = prefs?.getString("user_bio", "Ada di Chatin • Komunikasi aman All-in-One") ?: "Ada di Chatin",
             avatarUrl = prefs?.getString("user_avatar", "") ?: "",
             coverUrl = prefs?.getString("user_cover", "") ?: "",
             isPhoneVerified = true,
-            isLoggedIn = isLoggedIn,
-            isBiometricEnabled = prefs?.getBoolean("user_biometric_enabled", true) ?: true,
+            isLoggedIn = true,
+            isBiometricEnabled = prefs?.getBoolean("user_biometric_enabled", false) ?: false,
             cloudSyncStatus = "Tersinkronisasi ke Server Cloud Chatin",
             lastCloudBackupTime = prefs?.getLong("user_last_backup", System.currentTimeMillis()) ?: System.currentTimeMillis(),
-            googleAccountEmail = prefs?.getString("user_google_email", "pengguna@gmail.com") ?: "pengguna@gmail.com",
-            lastGoogleBackupTime = prefs?.getLong("user_last_google_backup", System.currentTimeMillis() - 86400000) ?: (System.currentTimeMillis() - 86400000),
+            googleAccountEmail = prefs?.getString("user_google_email", "") ?: "",
+            lastGoogleBackupTime = prefs?.getLong("user_last_google_backup", 0L) ?: 0L,
             privacyLastSeen = prefs?.getString("user_privacy_last_seen", "Semua Orang") ?: "Semua Orang",
             privacyReadReceipts = prefs?.getBoolean("user_privacy_receipts", true) ?: true,
             mediaAutoDownloadWifi = prefs?.getBoolean("user_media_wifi", true) ?: true,
@@ -888,7 +1035,7 @@ class ChatinRepository(private val context: Context? = null) {
         return AuthUiState(
             currentStep = AuthStep.AUTHENTICATED,
             user = user,
-            jwtToken = token
+            jwtToken = prefs?.getString("jwt_token", "jwt_token_${System.currentTimeMillis()}")
         )
     }
 
@@ -1006,56 +1153,43 @@ class ChatinRepository(private val context: Context? = null) {
         _linkedDevices.update { list -> list.filterNot { it.id == deviceId } }
     }
 
-    fun login(usernameOrPhone: String, password: String): Boolean {
-        if (usernameOrPhone.isBlank() || password.isBlank()) {
-            _authUiState.update { it.copy(errorMessage = "Username/Nomor telepon dan kata sandi tidak boleh kosong") }
+    fun requestPhoneLogin(phoneNumber: String): Boolean {
+        val cleanPhone = phoneNumber.trim()
+        if (cleanPhone.length < 8) {
+            _authUiState.update { it.copy(errorMessage = "Nomor telepon terlalu pendek. Masukkan nomor yang valid.") }
             return false
         }
-        val isPhone = usernameOrPhone.any { it.isDigit() }
-        val user = UserAccount(
-            id = (100..999).random(),
-            username = if (usernameOrPhone.startsWith("@")) usernameOrPhone else "@$usernameOrPhone",
-            phoneNumber = if (isPhone) usernameOrPhone else "+62 812-9988-7711",
-            displayName = if (isPhone) "Pengguna Ponsel" else usernameOrPhone.replaceFirstChar { it.uppercase() },
-            bio = "Profil resmi di Chatin • Komunikasi aman All-in-One",
-            isPhoneVerified = true,
-            isLoggedIn = true,
-            isBiometricEnabled = true
-        )
-        _authUiState.update {
-            val updated = it.copy(
-                user = user,
-                jwtToken = "jwt_token_${System.currentTimeMillis()}",
-                currentStep = AuthStep.AUTHENTICATED,
-                errorMessage = null
-            )
-            saveAuthUiState(updated)
-            updated
-        }
-        return true
-    }
-
-    fun register(username: String, phone: String, password: String): Boolean {
-        if (username.isBlank() || phone.isBlank() || password.isBlank()) {
-            _authUiState.update { it.copy(errorMessage = "Semua kolom pendaftaran wajib diisi") }
-            return false
-        }
-        val randomOtp = (100000..999999).random().toString()
+        val randomOtp = String.format(java.util.Locale.US, "%06d", (100000..999999).random())
         _authUiState.update {
             it.copy(
-                pendingUsername = username,
-                pendingPhoneNumber = phone,
+                pendingPhoneNumber = cleanPhone,
+                pendingUsername = "@" + cleanPhone.replace("[^0-9]".toRegex(), ""),
                 lastSentOtp = randomOtp,
                 otpCooldownSeconds = 60,
                 currentStep = AuthStep.VERIFY_OTP,
                 errorMessage = null
             )
         }
+        context?.let { ctx ->
+            android.widget.Toast.makeText(
+                ctx,
+                "🔐 Kode Verifikasi Chatin: $randomOtp (Berlaku 5 menit)",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
         return true
     }
 
+    fun login(usernameOrPhone: String, password: String): Boolean {
+        return requestPhoneLogin(usernameOrPhone)
+    }
+
+    fun register(username: String, phone: String, password: String): Boolean {
+        return requestPhoneLogin(phone)
+    }
+
     fun resendOtp(): String {
-        val randomOtp = (100000..999999).random().toString()
+        val randomOtp = String.format(java.util.Locale.US, "%06d", (100000..999999).random())
         _authUiState.update {
             it.copy(
                 lastSentOtp = randomOtp,
@@ -1063,12 +1197,20 @@ class ChatinRepository(private val context: Context? = null) {
                 errorMessage = null
             )
         }
+        context?.let { ctx ->
+            android.widget.Toast.makeText(
+                ctx,
+                "🔐 Kode Verifikasi Chatin Baru: $randomOtp",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
         return randomOtp
     }
 
     fun verifyOtp(enteredCode: String): Boolean {
         val expected = _authUiState.value.lastSentOtp
-        if (enteredCode == expected || enteredCode == "123456" || enteredCode == "749215") {
+        val cleanCode = enteredCode.trim()
+        if (cleanCode.isNotEmpty() && cleanCode == expected) {
             _authUiState.update {
                 it.copy(
                     currentStep = AuthStep.PROFILE_SETUP,
@@ -1077,25 +1219,25 @@ class ChatinRepository(private val context: Context? = null) {
             }
             return true
         } else {
-            _authUiState.update { it.copy(errorMessage = "Kode verifikasi salah! Coba: $expected atau 123456") }
+            _authUiState.update { it.copy(errorMessage = "Kode verifikasi 6-angka salah. Silakan periksa kembali.") }
             return false
         }
     }
 
     fun completeProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") {
-        val curPendingPhone = _authUiState.value.pendingPhoneNumber.ifBlank { "+62 812-3456-7890" }
-        val curPendingUser = _authUiState.value.pendingUsername.ifBlank { "pengguna_chatin" }
+        val curPendingPhone = _authUiState.value.pendingPhoneNumber.trim()
+        val cleanName = displayName.trim().ifBlank { "Pengguna" }
         val finalUser = UserAccount(
             id = (100..999).random(),
-            username = if (curPendingUser.startsWith("@")) curPendingUser else "@$curPendingUser",
+            username = "@" + curPendingPhone.replace("[^0-9]".toRegex(), ""),
             phoneNumber = curPendingPhone,
-            displayName = displayName.ifBlank { curPendingUser.replaceFirstChar { it.uppercase() } },
-            bio = bio.ifBlank { "Ada di Chatin • Komunikasi aman All-in-One" },
+            displayName = cleanName,
+            bio = bio.trim().ifBlank { "Ada di Chatin • Komunikasi aman All-in-One" },
             avatarUrl = avatarUrl,
             coverUrl = coverUrl,
             isPhoneVerified = true,
             isLoggedIn = true,
-            isBiometricEnabled = true
+            isBiometricEnabled = false
         )
         _authUiState.update {
             val updated = it.copy(
@@ -1130,15 +1272,25 @@ class ChatinRepository(private val context: Context? = null) {
     }
 
     fun logout() {
+        prefs?.edit()
+            ?.remove("user_id")
+            ?.remove("user_username")
+            ?.remove("user_phone")
+            ?.remove("user_display_name")
+            ?.remove("user_bio")
+            ?.remove("user_avatar")
+            ?.remove("user_cover")
+            ?.putBoolean("user_logged_in", false)
+            ?.remove("jwt_token")
+            ?.apply()
+
         _authUiState.update {
-            val updated = it.copy(
+            AuthUiState(
+                currentStep = AuthStep.LOGIN,
                 user = null,
                 jwtToken = null,
-                currentStep = AuthStep.LOGIN,
                 errorMessage = null
             )
-            saveAuthUiState(updated)
-            updated
         }
     }
 

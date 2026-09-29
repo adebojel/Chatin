@@ -102,7 +102,7 @@ fun MainAppScaffold(
     ) { uri: Uri? ->
         if (uri != null) {
             viewModel.updateProfile(
-                authUiState.user?.displayName ?: "Pengguna Chatin",
+                authUiState.user?.displayName ?: "",
                 authUiState.user?.bio ?: "Ada di Chatin • Komunikasi aman All-in-One",
                 uri.toString()
             )
@@ -114,11 +114,10 @@ fun MainAppScaffold(
     if (authUiState.currentStep != AuthStep.AUTHENTICATED || authUiState.user == null) {
         AuthScreen(
             authUiState = authUiState,
-            onLogin = { u, p -> viewModel.login(u, p) },
-            onRegister = { u, ph, p -> viewModel.register(u, ph, p) },
+            onRequestPhoneLogin = { phone -> viewModel.requestPhoneLogin(phone) },
             onVerifyOtp = { c -> viewModel.verifyOtp(c) },
             onResendOtp = { viewModel.resendOtp() },
-            onCompleteProfile = { d, b -> viewModel.completeProfile(d, b) },
+            onCompleteProfile = { d, b, a -> viewModel.completeProfile(d, b, a) },
             onSwitchStep = { s -> viewModel.setAuthStep(s) }
         )
         return

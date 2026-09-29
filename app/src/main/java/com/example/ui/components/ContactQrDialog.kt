@@ -216,7 +216,7 @@ fun ContactQrDialog(
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = user?.displayName ?: "Pengguna Chatin",
+                                text = user?.displayName?.ifBlank { user.phoneNumber } ?: "",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = Color(0xFF090D16)

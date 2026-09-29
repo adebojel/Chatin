@@ -405,6 +405,10 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
         repository.setAuthStep(step)
     }
 
+    fun requestPhoneLogin(phone: String): Boolean {
+        return repository.requestPhoneLogin(phone)
+    }
+
     fun login(usernameOrPhone: String, pass: String): Boolean {
         return repository.login(usernameOrPhone, pass)
     }
@@ -456,6 +460,12 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
 
     fun syncCloudServerData() {
         repository.syncCloudServerData()
+    }
+
+    fun getBackendServerUrl(): String = repository.backendBaseUrl
+
+    fun setCustomBackendServerUrl(url: String) {
+        repository.setCustomBackendServerUrl(url)
     }
 
     fun logout() {

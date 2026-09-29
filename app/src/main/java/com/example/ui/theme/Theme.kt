@@ -8,42 +8,42 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.example.data.models.AppThemeMode
 
-private val ChatinDarkColorScheme = darkColorScheme(
-    primary = CyberBlue,
-    onPrimary = Color(0xFF090D16),
-    primaryContainer = Color(0xFF162A45),
-    onPrimaryContainer = CyberBlue,
-    secondary = ElectricViolet,
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFF281E48),
-    onSecondaryContainer = Color(0xFFD0BCFF),
-    tertiary = NeonCyan,
-    background = BackgroundDark,
-    onBackground = TextPrimaryDark,
-    surface = SurfaceDark,
-    onSurface = TextPrimaryDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = TextSecondaryDark,
-    outline = BorderDark
+private val WhatsAppDarkColorScheme = darkColorScheme(
+    primary = WhatsAppGreen,
+    onPrimary = Color(0xFF0B141A),
+    primaryContainer = WhatsAppBubbleSentDark,
+    onPrimaryContainer = WhatsAppTextPrimaryDark,
+    secondary = WhatsAppLightGreen,
+    onSecondary = Color(0xFF0B141A),
+    secondaryContainer = WhatsAppDarkSurfaceVariant,
+    onSecondaryContainer = WhatsAppTextPrimaryDark,
+    tertiary = WhatsAppCheckmarkBlue,
+    background = WhatsAppDarkBg,
+    onBackground = WhatsAppTextPrimaryDark,
+    surface = WhatsAppDarkSurface,
+    onSurface = WhatsAppTextPrimaryDark,
+    surfaceVariant = WhatsAppDarkSurfaceVariant,
+    onSurfaceVariant = WhatsAppTextSecondaryDark,
+    outline = WhatsAppDividerDark
 )
 
-private val ChatinLightColorScheme = lightColorScheme(
-    primary = Color(0xFF0284C7),
+private val WhatsAppLightColorScheme = lightColorScheme(
+    primary = WhatsAppLightSurface,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE0F2FE),
-    onPrimaryContainer = Color(0xFF0369A1),
-    secondary = Color(0xFF7C3AED),
+    primaryContainer = WhatsAppBubbleSentLight,
+    onPrimaryContainer = WhatsAppTextPrimaryLight,
+    secondary = WhatsAppGreen,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEDE9FE),
-    onSecondaryContainer = Color(0xFF6D28D9),
-    tertiary = WhatsAppEmerald,
-    background = BackgroundLight,
-    onBackground = TextPrimaryLight,
-    surface = SurfaceLight,
-    onSurface = TextPrimaryLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = TextSecondaryLight,
-    outline = BorderLight
+    secondaryContainer = WhatsAppLightSurfaceVariant,
+    onSecondaryContainer = WhatsAppTextPrimaryLight,
+    tertiary = WhatsAppCheckmarkBlue,
+    background = WhatsAppLightBg,
+    onBackground = WhatsAppTextPrimaryLight,
+    surface = WhatsAppLightBg,
+    onSurface = WhatsAppTextPrimaryLight,
+    surfaceVariant = WhatsAppLightSurfaceVariant,
+    onSurfaceVariant = WhatsAppTextSecondaryLight,
+    outline = WhatsAppDividerLight
 )
 
 @Composable
@@ -56,7 +56,7 @@ fun MyApplicationTheme(
         AppThemeMode.CLEAN_WHITE -> false
         AppThemeMode.SYSTEM_AUTO -> isSystemInDarkTheme()
     }
-    val colorScheme = if (isDark) ChatinDarkColorScheme else ChatinLightColorScheme
+    val colorScheme = if (isDark) WhatsAppDarkColorScheme else WhatsAppLightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
