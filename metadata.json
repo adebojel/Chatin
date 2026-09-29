@@ -1,0 +1,6 @@
+{
+  "name": "chatin",
+  "description": "Aplikasi komunikasi resmi All-in-One modern: Chat WhatsApp/RCS/SMS, Panggilan Suara & Video HD, Sinkronisasi Kontak Perangkat, Akun Profil & Cloud Sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

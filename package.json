@@ -1,0 +1,22 @@
+{
+  "name": "whatsapp-secure-enterprise-chat",
+  "version": "1.0.0",
+  "description": "Enterprise End-to-End Encrypted Cloud Chat Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.500.0",
+    "@google/generative-ai": "^0.2.0",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "socket.io": "^4.7.5"
+  },
+  "author": "Enterprise Solution Architect",
+  "license": "MIT"
+}

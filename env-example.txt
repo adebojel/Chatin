@@ -1,0 +1,11 @@
+PORT=3000
+JWT_SECRET=rahasia_acak_panjang_dan_aman_anda_chatin_enterprise_2026
+URL_POSTGRESQL_CLOUD_ANDA=postgresql://postgres.project:password@supabase.com:5432/postgres
+GEMINI_API_KEY=AIzaSy_ApiKeyGeminiAndaDariAIStudio
+ALLOWED_ORIGINS=http://localhost:3000,https://railway.app,https://render.com
+S3_ENDPOINT=https://cloudflarestorage.com
+S3_ACCESS_KEY_ID=kunci_s3_anda
+S3_SECRET_ACCESS_KEY=rahasia_s3_anda
+S3_BUCKET_NAME=nama_bucket_anda
+SSL_KEY_PATH=./server.key
+SSL_CERT_PATH=./server.cert
