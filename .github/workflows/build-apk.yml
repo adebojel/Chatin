@@ -28,6 +28,7 @@ jobs:
         run: |
           npm install
           npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init Chatin com.example.chatin --web-dir www || true
           npx cap add android || true
           npx cap sync android
 
