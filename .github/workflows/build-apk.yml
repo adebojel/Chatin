@@ -23,11 +23,8 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Make Gradle Executable
-        run: chmod +x ./gradlew
-
       - name: Build APK Release
-        run: ./gradlew assembleRelease
+        run: gradle assembleRelease
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v1
