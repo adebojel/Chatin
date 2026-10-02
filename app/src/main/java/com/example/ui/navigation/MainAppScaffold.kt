@@ -112,11 +112,12 @@ fun MainAppScaffold(
 
     // Gate Autentikasi: Tampilkan AuthScreen jika belum login
     if (authUiState.currentStep != AuthStep.AUTHENTICATED || authUiState.user == null) {
+        val currentActivity = context as? android.app.Activity
         AuthScreen(
             authUiState = authUiState,
-            onRequestPhoneLogin = { phone -> viewModel.requestPhoneLogin(phone) },
+            onRequestPhoneLogin = { phone -> viewModel.requestPhoneLogin(phone, currentActivity) },
             onVerifyOtp = { c -> viewModel.verifyOtp(c) },
-            onResendOtp = { viewModel.resendOtp() },
+            onResendOtp = { viewModel.resendOtp(currentActivity) },
             onCompleteProfile = { d, b, a -> viewModel.completeProfile(d, b, a) },
             onSwitchStep = { s -> viewModel.setAuthStep(s) }
         )

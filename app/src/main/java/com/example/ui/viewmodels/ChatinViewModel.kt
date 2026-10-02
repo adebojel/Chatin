@@ -90,11 +90,24 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
-        // 2. Mengamati obrolan yang sedang dipilih untuk memperbarui daftar gelembung pesan
+        // 2. Mengamati obrolan yang sedang dipilih untuk memperbarui daftar gelembung pesan real-time
+        var realtimeJob: Job? = null
         viewModelScope.launch {
             _selectedChatId.collect { id ->
+                realtimeJob?.cancel()
                 if (id != null) {
                     _currentChatMessages.value = repository.getMessagesForChat(id)
+                    realtimeJob = viewModelScope.launch {
+                        try {
+                            repository.observeRealtimeMessages(id).collect { realtimeList ->
+                                if (realtimeList.isNotEmpty()) {
+                                    _currentChatMessages.value = realtimeList
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.w("VIEWMODEL_REALTIME", "Firestore listener: ${e.message}")
+                        }
+                    }
                 }
             }
         }
@@ -405,8 +418,8 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
         repository.setAuthStep(step)
     }
 
-    fun requestPhoneLogin(phone: String): Boolean {
-        return repository.requestPhoneLogin(phone)
+    fun requestPhoneLogin(phone: String, activity: android.app.Activity? = null): Boolean {
+        return repository.requestPhoneLogin(phone, activity)
     }
 
     fun login(usernameOrPhone: String, pass: String): Boolean {
@@ -417,8 +430,8 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
         return repository.register(username, phone, pass)
     }
 
-    fun resendOtp(): String {
-        return repository.resendOtp()
+    fun resendOtp(activity: android.app.Activity? = null): String {
+        return repository.resendOtp(activity)
     }
 
     fun verifyOtp(code: String): Boolean {

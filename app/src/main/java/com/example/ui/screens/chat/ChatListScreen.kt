@@ -125,7 +125,7 @@ fun ChatListScreen(
                 else -> !conv.isArchived
             }
             matchesQuery && matchesFilter
-        }
+        }.distinctBy { it.id }
     }
 
     Scaffold(
@@ -410,19 +410,28 @@ fun ChatListScreen(
             }
 
             // Contacts Row
-            if (contacts.isNotEmpty()) {
+            val distinctContacts = remember(contacts) {
+                contacts.distinctBy { if (it.phoneNumber.isNotBlank()) it.phoneNumber else it.id }
+            }
+            if (distinctContacts.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(contacts) { c ->
+                    items(distinctContacts, key = { "${it.id}_${it.phoneNumber}" }) { c ->
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .width(56.dp)
-                                .clickable { onStartNewChatWithIdentifier(c.phoneNumber) }
+                                .clickable {
+                                    try {
+                                        onStartNewChatWithIdentifier(c.phoneNumber.ifBlank { c.name })
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
                         ) {
                             Box(
                                 modifier = Modifier

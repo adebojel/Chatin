@@ -56,12 +56,13 @@ fun NewChatContactPickerSheet(
     }
 
     val filteredContacts = remember(contacts, searchQuery) {
-        if (searchQuery.isBlank()) contacts
+        val base = if (searchQuery.isBlank()) contacts
         else contacts.filter {
             it.name.contains(searchQuery, ignoreCase = true) ||
                     it.phoneNumber.contains(searchQuery, ignoreCase = true) ||
                     it.chatinId.contains(searchQuery, ignoreCase = true)
         }
+        base.distinctBy { if (it.phoneNumber.isNotBlank()) it.phoneNumber else it.id }
     }
 
     Dialog(
@@ -322,7 +323,7 @@ fun NewChatContactPickerSheet(
                             .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredContacts, key = { it.id }) { contact ->
+                        items(filteredContacts, key = { "${it.id}_${it.phoneNumber}" }) { contact ->
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
                                 color = Color(0xFF141F33),
@@ -330,8 +331,12 @@ fun NewChatContactPickerSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        onSelectContact(contact.phoneNumber)
-                                        onDismiss()
+                                        try {
+                                            onSelectContact(contact.phoneNumber.ifBlank { contact.name })
+                                            onDismiss()
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
                                     }
                             ) {
                                 Row(

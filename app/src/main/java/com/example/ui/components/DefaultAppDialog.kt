@@ -279,6 +279,31 @@ fun DefaultAppDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Card 3: Pengaturan Aplikasi Default Sistem Android Langsung
+                OutlinedButton(
+                    onClick = {
+                        DefaultAppHelper.openSystemDefaultAppsSettings(context)
+                    },
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = Color(0xFF00E5FF)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Buka Setelan Default Sistem Android",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF00E5FF),
+                        fontSize = 13.sp
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(18.dp))
 
                 Button(
