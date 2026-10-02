@@ -43,7 +43,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew clean assembleDebug --refresh-dependencies
 
       - name: Generate Tag Name
         id: tag
