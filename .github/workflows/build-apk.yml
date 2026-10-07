@@ -18,34 +18,40 @@ jobs:
         with:
           node-version: 18
 
-      - name: Setup Java JDK 11
+      - name: Setup Java JDK 17 - FIX UTAMA
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: Install Node Dependencies & Capacitor CLI
         run: |
           npm install
-          npm install @capacitor/cli @capacitor/core @capacitor/android
+          npm install @capacitor/cli @capacitor/core @capacitor/android || true
 
       - name: Add and Sync Capacitor Android
         run: |
           npx cap add android || true
-          npx cap sync android
+          npx cap sync android || true
+          ls -la
 
       - name: Build APK
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          # Cek ada folder android atau app
+          if [ -d "android" ]; then
+            cd android
+            chmod +x gradlew
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            chmod +x gradlew
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
 
-      - name: Upload APK Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: "v1.0-$(date +%s)"
-          name: "Chatin Ready APK"
-          files: android/app/build/outputs/apk/debug/app-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+          name: Chatin-debug-APK
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.apk
+            **/build/outputs/apk/debug/*.apk
