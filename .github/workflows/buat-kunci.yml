@@ -1,9 +1,0 @@
-name: Buat Kunci Sekali
-on: workflow_dispatch
-jobs:
-  buat-kunci:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          keytool -genkey -v -keystore chatin-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias chatin -storepass chatin123 -keypass chatin123 -dname "CN=Chatin, OU=Chatin, O=Chatin, L=Bekasi, S=Jabar, C=ID"
-          base64 chatin-release.jks
