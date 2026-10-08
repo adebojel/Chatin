@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "742183789694",
+    "project_id": "chatin-43eed",
+    "storage_bucket": "chatin-43eed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742183789694:android:c5e21bf841488482b4a42f",
+        "android_client_info": {
+          "package_name": "com.aistudio.chatin.kxqrvz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "742183789694-2qpnnj659lc2sbpqam6em7hj61h123sb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqx_aOgrVh33lLL8Zx3gBgDHJr5YY30Qc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "742183789694-2qpnnj659lc2sbpqam6em7hj61h123sb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
