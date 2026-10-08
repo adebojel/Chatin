@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "742183789694-9uv5f544jd87291mj4c4schgk1lgtvrn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.chatin.kxqrvz",
+            "certificate_hash": "102cf2446570e4d0412af7cd152b000a6eda27aa"
+          }
+        },
+        {
           "client_id": "742183789694-2qpnnj659lc2sbpqam6em7hj61h123sb.apps.googleusercontent.com",
           "client_type": 3
         }
