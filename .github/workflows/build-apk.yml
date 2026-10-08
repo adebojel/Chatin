@@ -13,7 +13,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
       - name: Setup Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/chatin-release.jks
-      - name: Build APK Release - Update Timpa
+      - name: Get SHA for Firebase
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: keytool -list -v -keystore app/chatin-release.jks -alias $KEY_ALIAS -storepass $KEYSTORE_PASSWORD -keypass $KEY_PASSWORD | grep -E "SHA1|SHA256"
+      - name: Build Release - Update Timpa
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
