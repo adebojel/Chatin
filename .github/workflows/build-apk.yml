@@ -18,45 +18,43 @@ jobs:
         with:
           node-version: 18
 
-      - name: Setup Java JDK 17
+      - name: Setup Java JDK 21 - WAJIB UNTUK BC 1.79
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install Node Dependencies
         run: |
           npm install || true
           npm install @capacitor/cli @capacitor/core @capacitor/android || true
 
-      - name: Fix BouncyCastle 1.79 -> 1.78.1
+      - name: Upgrade Gradle Wrapper to 8.10 - FIX MAJOR 65
         run: |
-          find . -name "*.kts" -o -name "*.gradle" | xargs sed -i 's/1\.79/1.78.1/g' || true
-          find . -name "libs.versions.toml" | xargs sed -i 's/1\.79/1.78.1/g' || true
-          echo "BC fixed"
+          if [ -f "android/gradlew" ]; then
+            cd android
+            ./gradlew wrapper --gradle-version 8.10 || true
+            cd ..
+          elif [ -f "gradlew" ]; then
+            ./gradlew wrapper --gradle-version 8.10 || true
+          fi
+          # Bersihkan cache lama yang korup
+          rm -rf ~/.gradle/caches/jars-9/*bcprov* || true
 
       - name: Add and Sync Capacitor
         run: |
           npx cap add android || true
           npx cap sync android || true
-          ls -la
-          ls -la android/ || true
 
-      - name: Build APK Debug
+      - name: Build APK Debug with Java 21
         run: |
           if [ -f "android/gradlew" ]; then
             cd android
             chmod +x gradlew
-            ./gradlew clean
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          elif [ -f "gradlew" ]; then
-            chmod +x gradlew
-            ./gradlew clean
-            ./gradlew assembleDebug --no-daemon --stacktrace
+            ./gradlew clean assembleDebug --no-daemon --stacktrace
           else
-            echo "gradlew not found!"
-            find . -name "gradlew" -type f
-            exit 1
+            chmod +x gradlew
+            ./gradlew clean assembleDebug --no-daemon --stacktrace
           fi
 
       - name: Upload APK Artifact
