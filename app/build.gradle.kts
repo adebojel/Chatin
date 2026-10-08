@@ -78,7 +78,6 @@ configurations.all {
     force("org.bouncycastle:bcutil-jdk18on:1.78.1")
   }
 }
-
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
