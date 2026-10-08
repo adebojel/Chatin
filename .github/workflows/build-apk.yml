@@ -20,8 +20,11 @@ jobs:
             ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7
           fi
           chmod +x gradlew
+          ./gradlew --version
       - name: Fix bcprov 1.79 -> 1.78.1
-        run: sed -i 's/1\.79/1.78.1/g' gradle/libs.versions.toml || true
+        run: |
+          sed -i 's/1\.79/1.78.1/g' gradle/libs.versions.toml || true
+          cat gradle/libs.versions.toml | grep bcprov || true
       - name: Build APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
       - name: Upload APK
