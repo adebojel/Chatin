@@ -29,33 +29,34 @@ jobs:
           npm install || true
           npm install @capacitor/cli @capacitor/core @capacitor/android || true
 
-      - name: Downgrade BouncyCastle - FIX ERROR MAJOR 65
+      - name: Fix BouncyCastle 1.79 -> 1.78.1
         run: |
-          # Cari semua build.gradle.kts yang pakai bcprov 1.79
-          find . -name "*.gradle*" -type f -exec sed -i 's/bcprov-jdk18on:1.79/bcprov-jdk18on:1.78.1/g' {} \;
-          find . -name "*.gradle*" -type f -exec sed -i 's/bcprov-jdk15on:1.79/bcprov-jdk15on:1.78.1/g' {} \;
-          # Atau force exclude MLKEM
-          echo "Fixed BouncyCastle version"
-
-      - name: Clean Gradle Cache
-        run: |
-          rm -rf ~/.gradle/caches/
-          ./gradlew clean || true
-          chmod +x gradlew
+          find . -name "*.kts" -o -name "*.gradle" | xargs sed -i 's/1\.79/1.78.1/g' || true
+          find . -name "libs.versions.toml" | xargs sed -i 's/1\.79/1.78.1/g' || true
+          echo "BC fixed"
 
       - name: Add and Sync Capacitor
         run: |
           npx cap add android || true
           npx cap sync android || true
+          ls -la
+          ls -la android/ || true
 
       - name: Build APK Debug
         run: |
-          if [ -d "android" ]; then
+          if [ -f "android/gradlew" ]; then
             cd android
             chmod +x gradlew
-            ./gradlew assembleDebug --no-daemon -Dorg.gradle.java.home=/usr/lib/jvm/temurin-17-jdk-amd64 --stacktrace
-          else
+            ./gradlew clean
             ./gradlew assembleDebug --no-daemon --stacktrace
+          elif [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew clean
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            echo "gradlew not found!"
+            find . -name "gradlew" -type f
+            exit 1
           fi
 
       - name: Upload APK Artifact
