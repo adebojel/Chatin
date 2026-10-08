@@ -1,65 +1,20 @@
-package com.example.ui.screens
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.fragment.app.FragmentActivity
-import com.google.firebase.FirebaseException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthCredential
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import java.util.concurrent.TimeUnit
-
-@Composable
-fun LoginPhoneScreen(onLoginSuccess: () -> Unit) {
-    var phone by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
-    var verificationId by remember { mutableStateOf("") }
-    var isOtpSent by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("Login Chatin") }
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
-
-    Column(Modifier.padding(24.dp).fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        Text(status, style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(24.dp))
-        if (!isOtpSent) {
-            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("No HP contoh +62812...") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = {
-                status = "Mengirim SMS..."
-                val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                    override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                        auth.signInWithCredential(credential).addOnSuccessListener { onLoginSuccess() }
-                    }
-                    override fun onVerificationFailed(e: FirebaseException) {
-                        status = "Gagal: ${e.message}"
-                    }
-                    override fun onCodeSent(id: String, token: PhoneAuthProvider.ForceResendingToken) {
-                        verificationId = id
-                        isOtpSent = true
-                        status = "SMS Terkirim ke $phone"
-                    }
-                }
-                val options = PhoneAuthOptions.newBuilder(auth)
-                    .setPhoneNumber(phone)
-                    .setTimeout(60L, TimeUnit.SECONDS)
-                    .setActivity(context as FragmentActivity)
-                    .setCallbacks(callbacks)
-                    .build()
-                PhoneAuthProvider.verifyPhoneNumber(options)
-            }, modifier = Modifier.fillMaxWidth()) { Text("Kirim SMS Beneran") }
-        } else {
-            OutlinedTextField(value = otp, onValueChange = { otp = it }, label = { Text("Kode SMS 6 digit") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = {
-                val credential = PhoneAuthProvider.getCredential(verificationId, otp)
-                auth.signInWithCredential(credential).addOnSuccessListener { onLoginSuccess() }.addOnFailureListener { status = "Kode salah" }
-            }, modifier = Modifier.fillMaxWidth()) { Text("Verifikasi") }
-        }
-    }
-}
+name: Build APK Chatin
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Build APK
+        run: chmod +x./gradlew &&./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
