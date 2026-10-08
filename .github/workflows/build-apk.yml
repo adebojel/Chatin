@@ -21,7 +21,6 @@ jobs:
             unzip -q gradle-9.3.1-bin.zip
             ./gradle-9.3.1/bin/gradle wrapper --gradle-version 9.3.1
           else
-            # Kalau gradlew sudah ada tapi versi lama, update
             sed -i 's/gradle-.*-bin.zip/gradle-9.3.1-bin.zip/' gradle/wrapper/gradle-wrapper.properties || true
           fi
           chmod +x gradlew
@@ -29,6 +28,20 @@ jobs:
 
       - name: Fix bcprov 1.79 -> 1.78.1
         run: sed -i 's/1\.79/1.78.1/g' gradle/libs.versions.toml || true
+
+      - name: Create dummy google-services.json
+        run: |
+          echo '{"project_info":{"project_number":"123456789","project_id":"chatin-dummy","storage_bucket":"chatin-dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789:android:abcdef","android_client_info":{"package_name":"com.ade.chatin"}},"oauth_client":[],"api_key":[{"current_key":"AIzaDummyKey-1234567890"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > app/google-services.json
+          mkdir -p app/src/debug
+          cp app/google-services.json app/src/debug/google-services.json
+          ls -l app/google-services.json
+
+      - name: Create debug keystore
+        run: |
+          rm -f ~/.android/debug.keystore
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          ls -l ~/.android/debug.keystore
 
       - name: Build APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
