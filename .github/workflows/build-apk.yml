@@ -29,63 +29,60 @@ jobs:
           npm install || true
           npm install @capacitor/cli @capacitor/core @capacitor/android || true
 
-      - name: FORCE Downgrade BouncyCastle in ALL Gradle files - FIX MAJOR 65
+      - name: FORCE Downgrade BouncyCastle - FIX MAJOR 65
         run: |
-          echo "=== Sebelum fix ==="
-          grep -r "bcprov" --include="*.gradle*" --include="*.toml" . || echo "tidak ketemu bcprov di source, tapi ada di cache"
+          # Cari dan paksa 1.78.1 di semua file
+          find . -name "libs.versions.toml" -exec sed -i 's/1\.79/1.78.1/g' {} \; || true
+          find . -name "*.kts" -exec sed -i 's/1\.79/1.78.1/g' {} \; || true
           
-          # 1. Paksa di gradle/libs.versions.toml (Capacitor 6)
-          if [ -f "android/gradle/libs.versions.toml" ]; then
-            sed -i 's/bcprov.*=.*/bcprov-jdk18on = "1.78.1"/g' android/gradle/libs.versions.toml || true
-            sed -i 's/1\.79/1.78.1/g' android/gradle/libs.versions.toml
-            cat android/gradle/libs.versions.toml | grep bcprov || true
-          fi
-          
-          # 2. Paksa di android/app/build.gradle.kts - tambah resolutionStrategy
-          if [ -f "android/app/build.gradle.kts" ]; then
-            echo '
+          # Tambah force di app/build.gradle.kts kalau ada
+          if [ -f "app/build.gradle.kts" ]; then
+            grep -q "bcprov" app/build.gradle.kts || echo '
           configurations.all {
               resolutionStrategy {
                   force("org.bouncycastle:bcprov-jdk18on:1.78.1")
                   force("org.bouncycastle:bcpkix-jdk18on:1.78.1")
               }
-          }' >> android/app/build.gradle.kts
+          }' >> app/build.gradle.kts
           fi
           
-          # 3. Paksa di android/build.gradle.kts
-          if [ -f "android/build.gradle.kts" ]; then
-            echo '
-          allprojects {
-            configurations.all {
-              resolutionStrategy {
-                force("org.bouncycastle:bcprov-jdk18on:1.78.1")
-              }
-            }
-          }' >> android/build.gradle.kts
-          fi
-          
-          # 4. Hapus cache bcprov 1.79 yang korup
+          # Hapus cache korup
           rm -rf ~/.gradle/caches/modules-2/files-2.1/org.bouncycastle/bcprov-jdk18on/1.79 || true
           rm -rf ~/.gradle/caches/jars-9/*bcprov* || true
-          rm -rf android/.gradle || true
-          rm -rf .gradle || true
+
+      - name: Detect Project Type and Build APK
+        run: |
+          ls -la
+          echo "=== cek struktur ==="
+          ls -la app/ || true
+          ls -la android/ || true
           
-          echo "=== Sesudah fix ==="
-
-      - name: Add and Sync Capacitor
-        run: |
-          npx cap sync android || true
-
-      - name: Build APK Debug
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew clean assembleDebug --no-daemon --stacktrace -Dorg.gradle.java.home=/usr/lib/jvm/temurin-17-jdk-amd64
+          if [ -f "android/gradlew" ]; then
+            echo "Build mode: Capacitor android/"
+            cd android
+            chmod +x gradlew
+            ./gradlew clean assembleDebug --no-daemon --stacktrace
+          elif [ -f "gradlew" ] && [ -f "app/build.gradle.kts" ]; then
+            echo "Build mode: Native root + app/"
+            chmod +x gradlew
+            ./gradlew clean assembleDebug --no-daemon --stacktrace
+          elif [ -f "app/gradlew" ]; then
+            echo "Build mode: Native app/gradlew"
+            cd app
+            chmod +x gradlew || true
+            cd ..
+            ./gradlew clean assembleDebug --no-daemon --stacktrace || ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          else
+            echo "gradlew not found! list:"
+            find . -name "gradlew" -type f
+            exit 1
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Chatin-debug-APK
           path: |
+            app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/apk/debug/*.apk
             **/build/outputs/apk/debug/*.apk
