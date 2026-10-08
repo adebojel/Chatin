@@ -9,7 +9,6 @@ import com.example.data.local.AppLocalDatabase
 import com.example.data.local.LocalMessage
 import com.example.data.local.LocalMessageDao
 import com.example.data.models.*
-import com.example.util.ActiveNetworkState
 import com.example.util.NetworkManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,8 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.UUID
 
 class ChatinRepository(private val context: Context) {
@@ -55,18 +52,37 @@ class ChatinRepository(private val context: Context) {
         loadInitialData()
     }
 
+    private fun normalizePhone(phone: String): String {
+        return phone.replace("+", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "").takeLast(12)
+    }
+
     private fun loadInitialData() {
-        val isLoggedIn = prefs.getBoolean("is_logged_in", true)
-        val savedPhone = prefs.getString("user_phone", "+62 812-3456-7890")?: "+62 812-3456-7890"
-        val savedName = prefs.getString("user_name", "Alex Pratama")?: "Alex Pratama"
-        val savedBio = prefs.getString("user_bio", "Ada di Chatin • Komunikasi aman All-in-One")?: "Ada di Chatin"
+        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
+        val savedPhone = prefs.getString("user_phone", "")?.trim()?: ""
+        val savedName = prefs.getString("user_name", "")?.trim()?: ""
+        val savedBio = prefs.getString("user_bio", "")?.trim()?: ""
+
+        if (!isLoggedIn || savedPhone.isBlank()) {
+            val emptyUser = UserAccount(
+                id = 0, username = "", phoneNumber = "",
+                displayName = "", bio = "", isLoggedIn = false, isPhoneVerified = false
+            )
+            _authUiState.value = AuthUiState(currentStep = AuthStep.LOGIN, user = emptyUser)
+            _contacts.value = emptyList()
+            _conversations.value = emptyList()
+            _messagesMap.value = emptyMap()
+            _callHistory.value = emptyList()
+            _linkedDevices.value = emptyList()
+            return
+        }
+
         val initialUser = UserAccount(
-            id = 1, username = "alexpratama", phoneNumber = savedPhone,
-            displayName = savedName, bio = savedBio, isLoggedIn = isLoggedIn, isPhoneVerified = true
+            id = 1, username = normalizePhone(savedPhone), phoneNumber = savedPhone,
+            displayName = if (savedName.isNotBlank()) savedName else savedPhone,
+            bio = if (savedBio.isNotBlank()) savedBio else "Halo, saya pakai Chatin",
+            isLoggedIn = true, isPhoneVerified = true
         )
-        _authUiState.value = AuthUiState(
-            currentStep = if (isLoggedIn) AuthStep.AUTHENTICATED else AuthStep.LOGIN, user = initialUser
-        )
+        _authUiState.value = AuthUiState(currentStep = AuthStep.AUTHENTICATED, user = initialUser)
         _contacts.value = emptyList()
         _conversations.value = emptyList()
         _messagesMap.value = emptyMap()
@@ -82,9 +98,7 @@ class ChatinRepository(private val context: Context) {
                 localMessageDao.updateLocalMessageServerIdAndStatus(local.id, serverMsgId, "SENT")
                 onSynced(local.id, serverMsgId)
             }
-        } catch (e: Exception) {
-            Log.e("ChatinRepository", "Gagal sinkronisasi: ${e.message}", e)
-        }
+        } catch (e: Exception) { Log.e("ChatinRepository", "Gagal sinkronisasi: ${e.message}", e) }
     }
 
     suspend fun cacheIncomingMessageLocally(message: LocalMessage) {
@@ -96,12 +110,15 @@ class ChatinRepository(private val context: Context) {
     fun observeRealtimeMessages(chatId: String): Flow<List<Message>> = FirebaseManager.observeMessages(chatId)
 
     fun startOrGetChat(identifier: String): ChatConversation {
-        val existing = _conversations.value.find { it.id == identifier || it.contact.id == identifier || it.contact.phoneNumber == identifier }
+        val cleanIdentifier = normalizePhone(identifier)
+        val myPhone = normalizePhone(prefs.getString("user_phone", "")?: "")
+        val existing = _conversations.value.find { normalizePhone(it.contact.phoneNumber) == cleanIdentifier }
         if (existing!= null) return existing
-        val matchedContact = _contacts.value.find { it.id == identifier || it.phoneNumber == identifier }?: Contact(
-            id = "c_${System.currentTimeMillis()}", name = identifier, phoneNumber = identifier, chatinId = identifier
+        val matchedContact = _contacts.value.find { normalizePhone(it.phoneNumber) == cleanIdentifier }?: Contact(
+            id = "c_$cleanIdentifier", name = identifier, phoneNumber = identifier, chatinId = identifier
         )
-        val newConvId = "conv_${matchedContact.id}"
+        val sortedPhones = listOf(myPhone, cleanIdentifier).filter { it.isNotBlank() }.sorted()
+        val newConvId = if (sortedPhones.size == 2) "chat_${sortedPhones[0]}_${sortedPhones[1]}" else "chat_$cleanIdentifier"
         val newConv = ChatConversation(id = newConvId, contact = matchedContact, lastMessage = "Mulai obrolan baru", lastMessageTimestamp = System.currentTimeMillis())
         _conversations.update { listOf(newConv) + it.filterNot { c -> c.id == newConvId } }
         return newConv
@@ -109,7 +126,7 @@ class ChatinRepository(private val context: Context) {
 
     fun sendMessage(chatId: String, text: String, type: MessageType = MessageType.TEXT, channel: DeliveryChannel = DeliveryChannel.DATA_NETWORK, fileName: String? = null, fileSizeText: String? = null, mediaUrl: String? = null, durationSeconds: Int = 0) {
         val user = _authUiState.value.user
-        val senderName = user?.displayName?: "Alex Pratama"
+        val senderName = user?.displayName?.takeIf { it.isNotBlank() }?: user?.phoneNumber?: "Saya"
         val timestamp = System.currentTimeMillis()
         val messageId = "msg_${UUID.randomUUID()}"
         val newMessage = Message(id = messageId, chatId = chatId, senderId = "me", senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.SENT, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
@@ -118,9 +135,8 @@ class ChatinRepository(private val context: Context) {
         val contact = _conversations.value.find { it.id == chatId }?.contact
         FirebaseManager.sendMessage(chatId = chatId, message = newMessage, contactName = contact?.name?: "Kontak", contactPhone = contact?.phoneNumber?: "", onSuccess = { Log.d("ChatinRepository", "Pesan terkirim") }, onError = { error -> Log.w("ChatinRepository", "Gagal: ${error.message}") })
         repositoryScope.launch {
-            try {
-                localMessageDao.insertMessage(LocalMessage(serverMsgId = timestamp, pengirimId = user?.id?: 1, penerimaId = 0, msgType = type.name.lowercase(), textText = text, cloudMediaUrl = mediaUrl, statusPesan = "SENT", timestamp = timestamp))
-            } catch (e: Exception) { Log.e("ChatinRepository", "Gagal insert Room: ${e.message}") }
+            try { localMessageDao.insertMessage(LocalMessage(serverMsgId = timestamp, pengirimId = user?.id?: 1, penerimaId = 0, msgType = type.name.lowercase(), textText = text, cloudMediaUrl = mediaUrl, statusPesan = "SENT", timestamp = timestamp)) }
+            catch (e: Exception) { Log.e("ChatinRepository", "Gagal insert Room: ${e.message}") }
         }
     }
 
@@ -140,27 +156,17 @@ class ChatinRepository(private val context: Context) {
     fun linkNewWebDevice(browser: String, os: String, location: String) { val newDev = WebLinkedDevice(id = "dev_${System.currentTimeMillis()}", browserName = browser, osName = os, location = location, lastActiveTime = System.currentTimeMillis(), isActive = true); _linkedDevices.update { listOf(newDev) + it } }
     fun unlinkDevice(deviceId: String) { _linkedDevices.update { list -> list.filterNot { it.id == deviceId } } }
 
-    // === FIX UTAMA: HAPUS DEBUG OTP ===
     fun requestChangePhoneNumber(newPhone: String, onResult: (Boolean, String) -> Unit) {
-        if (newPhone.isBlank() || newPhone.length < 7) {
-            onResult(false, "Nomor telepon tidak valid")
-            return
-        }
+        if (newPhone.isBlank() || newPhone.length < 7) { onResult(false, "Nomor telepon tidak valid"); return }
         _authUiState.update { it.copy(lastSentOtp = "", pendingPhoneNumber = newPhone) }
         onResult(true, "Kode verifikasi dikirim via SMS ke $newPhone")
     }
 
     fun verifyAndCommitNewPhoneNumber(newPhone: String, otpCode: String, onResult: (Boolean, String) -> Unit) {
         if (otpCode.length == 6) {
-            _authUiState.update { state ->
-                val updatedUser = state.user?.copy(phoneNumber = newPhone)
-                prefs.edit().putString("user_phone", newPhone).apply()
-                state.copy(user = updatedUser, pendingPhoneNumber = "", lastSentOtp = "")
-            }
+            _authUiState.update { state -> val updatedUser = state.user?.copy(phoneNumber = newPhone); prefs.edit().putString("user_phone", newPhone).apply(); state.copy(user = updatedUser, pendingPhoneNumber = "", lastSentOtp = "") }
             onResult(true, "Nomor telepon berhasil diperbarui ke $newPhone")
-        } else {
-            onResult(false, "Kode OTP salah atau telah kadaluarsa")
-        }
+        } else { onResult(false, "Kode OTP salah atau telah kadaluarsa") }
     }
 
     fun updateTheme(newTheme: ThemeState) { _themeState.value = newTheme }
@@ -169,14 +175,8 @@ class ChatinRepository(private val context: Context) {
     fun requestPhoneLogin(phone: String, activity: Activity? = null): Boolean {
         _authUiState.update { it.copy(pendingPhoneNumber = phone, lastSentOtp = "", currentStep = AuthStep.VERIFY_OTP) }
         if (activity!= null) {
-            try {
-                FirebaseManager.sendPhoneOtp(
-                    activity = activity, phoneNumber = phone,
-                    onCodeSent = { _ -> Log.d("ChatinRepository", "Firebase OTP sent") },
-                    onVerificationCompleted = { _ -> _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } },
-                    onVerificationFailed = { error -> Log.w("ChatinRepository", "Firebase error: ${error.message}") }
-                )
-            } catch (e: Exception) { Log.w("ChatinRepository", "Firebase send failed: ${e.message}") }
+            try { FirebaseManager.sendPhoneOtp(activity = activity, phoneNumber = phone, onCodeSent = { _ -> Log.d("ChatinRepository", "Firebase OTP sent") }, onVerificationCompleted = { _ -> _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }, onVerificationFailed = { error -> Log.w("ChatinRepository", "Firebase error: ${error.message}") }) }
+            catch (e: Exception) { Log.w("ChatinRepository", "Firebase send failed: ${e.message}") }
         }
         return true
     }
@@ -192,28 +192,34 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun resendOtp(activity: Activity? = null): String {
-        val phone = _authUiState.value.pendingPhoneNumber.ifBlank { "+62 812-3456-7890" }
+        val phone = _authUiState.value.pendingPhoneNumber
+        if (phone.isBlank()) return ""
         requestPhoneLogin(phone, activity)
         return _authUiState.value.lastSentOtp
     }
 
     fun verifyOtp(code: String): Boolean {
         val valid = code.length == 6
-        if (valid) {
-            _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(isLoggedIn = true, isPhoneVerified = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) }
-        }
+        if (valid) { _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(isLoggedIn = true, isPhoneVerified = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) } }
         return valid
     }
 
     fun completeProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { updateProfile(displayName, bio, avatarUrl, coverUrl); _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }
     fun updateProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { _authUiState.update { state -> val updatedUser = (state.user?: UserAccount()).copy(displayName = displayName, bio = bio, avatarUrl = avatarUrl, coverUrl = coverUrl); prefs.edit().putString("user_name", displayName).putString("user_bio", bio).apply(); state.copy(user = updatedUser) } }
-    fun addContact(name: String, phoneNumber: String, chatinId: String = ""): Contact { val newContact = Contact(id = "c_${System.currentTimeMillis()}", name = name, phoneNumber = phoneNumber, chatinId = if (chatinId.isNotBlank()) chatinId else "@${name.lowercase().replace(" ", "")}"); _contacts.update { listOf(newContact) + it.filterNot { c -> c.phoneNumber == phoneNumber } }; return newContact }
-    fun syncDeviceContacts(deviceContacts: List<Contact>) { if (deviceContacts.isNotEmpty()) { _contacts.update { current -> val phoneSet = current.map { it.phoneNumber }.toSet(); val newOnes = deviceContacts.filterNot { phoneSet.contains(it.phoneNumber) }; current + newOnes } } }
+
+    fun addContact(name: String, phoneNumber: String, chatinId: String = ""): Contact {
+        val cleanPhone = normalizePhone(phoneNumber)
+        val newContact = Contact(id = "c_$cleanPhone", name = name, phoneNumber = phoneNumber, chatinId = if (chatinId.isNotBlank()) chatinId else "@${name.lowercase().replace(" ", "")}")
+        _contacts.update { listOf(newContact) + it.filterNot { normalizePhone(it.phoneNumber) == cleanPhone } }
+        return newContact
+    }
+
+    fun syncDeviceContacts(deviceContacts: List<Contact>) { if (deviceContacts.isNotEmpty()) { _contacts.update { current -> val phoneSet = current.map { normalizePhone(it.phoneNumber) }.toSet(); val newOnes = deviceContacts.filterNot { phoneSet.contains(normalizePhone(it.phoneNumber)) }; current + newOnes } } }
     fun backupChatToGoogle(accountEmail: String) { _authUiState.update { state -> val updatedUser = state.user?.copy(googleAccountEmail = accountEmail, lastGoogleBackupTime = System.currentTimeMillis()); state.copy(user = updatedUser) } }
     fun updatePrivacySettings(lastSeen: String, readReceipts: Boolean) { _authUiState.update { state -> val updated = state.user?.copy(privacyLastSeen = lastSeen, privacyReadReceipts = readReceipts); state.copy(user = updated) } }
     fun updateStorageSettings(autoDownloadWifi: Boolean, autoDownloadCellular: Boolean) { _authUiState.update { state -> val updated = state.user?.copy(mediaAutoDownloadWifi = autoDownloadWifi, mediaAutoDownloadCellular = autoDownloadCellular); state.copy(user = updated) } }
     fun updateAccessibilitySettings(fontSizeScale: Float, highContrast: Boolean, displayDensityScale: Float = 1.0f) { _authUiState.update { state -> val updated = state.user?.copy(fontSizeScale = fontSizeScale, highContrastMode = highContrast, displayDensityScale = displayDensityScale); state.copy(user = updated) } }
     fun syncCloudServerData() { _authUiState.update { state -> val updated = state.user?.copy(lastCloudBackupTime = System.currentTimeMillis(), cloudSyncStatus = "Tersinkronisasi ke Server Cloud Chatin"); state.copy(user = updated) } }
     fun setCustomBackendServerUrl(url: String) { backendBaseUrl = url; prefs.edit().putString("backend_url", url).apply() }
-    fun logout() { prefs.edit().putBoolean("is_logged_in", false).apply(); _authUiState.update { it.copy(currentStep = AuthStep.LOGIN, user = it.user?.copy(isLoggedIn = false)) } }
+    fun logout() { prefs.edit().clear().apply(); loadInitialData() }
 }
