@@ -27,9 +27,36 @@ jobs:
         run: sed -i 's/1.79/1.78.1/g' gradle/libs.versions.toml || true
       - name: Create dummy google-services.json
         run: |
-          echo '{"project_info":{"project_number":"123456789","project_id":"chatin-dummy","storage_bucket":"chatin-dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789:android:abcdef","android_client_info":{"package_name":"com.aistudio.chatin.kxxqrvz"}},"oauth_client":[],"api_key":[{"current_key":"AIzaDummyKey-1234567890"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > app/google-services.json
           mkdir -p app/src/debug
-          cp app/google-services.json app/src/debug/google-services.json
+          cat > app/src/debug/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "1234567890",
+              "project_id": "dummy-project",
+              "storage_bucket": "dummy-project.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:1234567890:android:abcdef",
+                  "android_client_info": {
+                    "package_name": "com.aistudio.chatin.kxqrvz"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "dummy_key"
+                  }
+                ],
+                "services": {}
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          cp app/src/debug/google-services.json app/google-services.json
+          cp app/src/debug/google-services.json app/src/main/google-services.json || true
       - name: Create debug keystore
         run: |
           rm -f ~/.android/debug.keystore
@@ -37,7 +64,7 @@ jobs:
           keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           ls -l ~/.android/debug.keystore
       - name: Build APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+        run: ./gradlew app:assembleDebug --no-daemon --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
