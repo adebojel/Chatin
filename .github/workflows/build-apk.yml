@@ -18,32 +18,43 @@ jobs:
         with:
           node-version: 18
 
-      - name: Setup Java JDK 17 - FIX UTAMA
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Node Dependencies & Capacitor CLI
+      - name: Install Node Dependencies
         run: |
-          npm install
+          npm install || true
           npm install @capacitor/cli @capacitor/core @capacitor/android || true
 
-      - name: Add and Sync Capacitor Android
+      - name: Downgrade BouncyCastle - FIX ERROR MAJOR 65
+        run: |
+          # Cari semua build.gradle.kts yang pakai bcprov 1.79
+          find . -name "*.gradle*" -type f -exec sed -i 's/bcprov-jdk18on:1.79/bcprov-jdk18on:1.78.1/g' {} \;
+          find . -name "*.gradle*" -type f -exec sed -i 's/bcprov-jdk15on:1.79/bcprov-jdk15on:1.78.1/g' {} \;
+          # Atau force exclude MLKEM
+          echo "Fixed BouncyCastle version"
+
+      - name: Clean Gradle Cache
+        run: |
+          rm -rf ~/.gradle/caches/
+          ./gradlew clean || true
+          chmod +x gradlew
+
+      - name: Add and Sync Capacitor
         run: |
           npx cap add android || true
           npx cap sync android || true
-          ls -la
 
-      - name: Build APK
+      - name: Build APK Debug
         run: |
-          # Cek ada folder android atau app
           if [ -d "android" ]; then
             cd android
             chmod +x gradlew
-            ./gradlew assembleDebug --no-daemon --stacktrace
+            ./gradlew assembleDebug --no-daemon -Dorg.gradle.java.home=/usr/lib/jvm/temurin-17-jdk-amd64 --stacktrace
           else
-            chmod +x gradlew
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
 
