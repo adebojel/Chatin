@@ -36,6 +36,12 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: chatin-debug-signing-key-v1
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
