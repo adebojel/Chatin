@@ -11,7 +11,6 @@ import com.example.data.models.MessageStatus
 import com.example.data.models.MessageType
 import com.example.data.models.UserAccount
 import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
@@ -41,20 +40,14 @@ object FirebaseManager {
         if (isInitialized) return
         try {
             if (FirebaseApp.getApps(context).isEmpty()) {
-                try {
-                    FirebaseApp.initializeApp(context)
-                } catch (e: Exception) {
-                    // Fallback inisialisasi default jika google-services.json belum diinjeksikan secara statis
-                    val options = FirebaseOptions.Builder()
-                        .setApplicationId("1:385344590708:android:chatinapp")
-                        .setProjectId("chatin-official")
-                        .setApiKey("AIzaSyChatinOfficialMobileKey2026")
-                        .build()
-                    FirebaseApp.initializeApp(context, options)
-                }
+                FirebaseApp.initializeApp(context)
             }
-            isInitialized = true
-            Log.d(TAG, "Firebase initialized successfully.")
+            isInitialized = FirebaseApp.getApps(context).isNotEmpty()
+            if (isInitialized) {
+                Log.d(TAG, "Firebase initialized successfully.")
+            } else {
+                Log.w(TAG, "Firebase is not configured. Add the real google-services.json for this application.")
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Firebase initialization warning: ${e.message}")
         }
