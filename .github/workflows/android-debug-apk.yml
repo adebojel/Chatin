@@ -1,0 +1,59 @@
+name: Android debug APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/android-debug-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug:
+    name: Build and inspect debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Build debug APK
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Print APK signing certificate fingerprints
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --print-certs "$APK" | tee apk-certificate.txt
+
+      - name: Upload debug APK and certificate report
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatin-debug-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-certificate.txt
+          if-no-files-found: error
+          retention-days: 7
