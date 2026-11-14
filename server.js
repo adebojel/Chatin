@@ -33,7 +33,10 @@ process.on('unhandledRejection', (reason, promise) => {
 // 2. ENVIRONMENT & DATABASE CONFIGURATION
 // =====================================================================
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'chatin_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || '';
+if (JWT_SECRET.length < 32) {
+    throw new Error('Startup ditolak: JWT_SECRET wajib diatur dan minimal 32 karakter.');
+}
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 // Inisialisasi PostgreSQL Connection Pool
@@ -43,15 +46,16 @@ const pool = new Pool({
 });
 
 // Inisialisasi AWS S3 / Cloudflare R2 Storage Client
-const s3Client = new S3Client({
-    region: 'auto',
-    endpoint: process.env.S3_ENDPOINT || undefined,
+const storageConfigured = Boolean(process.env.S3_ENDPOINT && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY && process.env.S3_BUCKET_NAME);
+const s3Client = storageConfigured ? new S3Client({
+    region: process.env.S3_REGION || 'auto',
+    endpoint: process.env.S3_ENDPOINT,
     credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID || 'dummy_s3_key',
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'dummy_s3_secret'
+        accessKeyId: process.env.S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY
     }
-});
-const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || 'chatin-cloud-storage';
+}) : null;
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || '';
 
 // Inisialisasi Google Gemini AI Studio Client
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
@@ -188,7 +192,7 @@ app.post('/api/pre-keys', authenticateToken, async (req, res) => {
 });
 
 // Signal Protocol: Ambil Pre-Keys Kunci Publik Pengguna Target
-app.get('/api/pre-keys/:userId', async (req, res) => {
+app.get('/api/pre-keys/:userId', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM pre_keys WHERE user_id = $1', [req.params.userId]);
         if (result.rows.length === 0) {
@@ -206,20 +210,9 @@ app.post('/api/phone/request-change', authenticateToken, async (req, res) => {
         const { newPhone } = req.body;
         if (!newPhone) return res.status(400).json({ error: 'Nomor telepon baru harus diisi' });
 
-        // Generate 6 digit angka kode verifikasi acak
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
-
-        await pool.query(
-            'INSERT INTO phone_verifications (user_id, new_phone, verification_code, expires_at) VALUES ($1, $2, $3, $4)',
-            [req.user.id, newPhone, otpCode, expiresAt]
-        );
-
-        console.log(`[REAL_SMS_GATEWAY] Mengirim SMS OTP '${otpCode}' ke nomor ${newPhone}`);
-        res.json({
-            message: `Kode verifikasi OTP berhasil dikirim ke ${newPhone}`,
-            expiresAt
-        });
+        // Fail closed: never claim an OTP was sent when no real SMS provider is configured.
+        // Configure a provider adapter before enabling this endpoint in production.
+        return res.status(503).json({ error: 'Layanan SMS OTP belum dikonfigurasi. Perubahan nomor dinonaktifkan demi keamanan.' });
     } catch (err) {
         res.status(500).json({ error: 'Gagal memproses permintaan OTP: ' + err.message });
     }
@@ -283,6 +276,9 @@ app.post('/api/media/upload', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Payload berkas terenkripsi tidak ditemukan' });
         }
 
+        if (!storageConfigured || !s3Client) {
+            return res.status(503).json({ error: 'Penyimpanan media belum dikonfigurasi.' });
+        }
         const buffer = Buffer.from(encryptedBase64Payload, 'base64');
         const key = `chatin_media_${Date.now()}_${filename || 'encrypted_binary'}`;
 
@@ -318,7 +314,7 @@ if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
     console.log('[SECURITY] HTTPS SSL Server diinisialisasi menggunakan sertifikat mkcert');
 } else {
     server = http.createServer(app);
-    console.log('[WARNING] Sertifikat SSL tidak ditemukan di jalur yang ditentukan. Menggunakan protokol HTTP aman.');
+    console.error('[SECURITY_WARNING] Sertifikat TLS tidak ditemukan; server berjalan melalui HTTP. Gunakan TLS termination tepercaya di reverse proxy sebelum menerima trafik publik.');
 }
 
 const io = new Server(server, {
