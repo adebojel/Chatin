@@ -215,7 +215,10 @@ object FirebaseManager {
         onSuccess: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
-        val db = firestore ?: return
+        val db = firestore ?: run {
+            onError(IllegalStateException("Firestore tidak tersedia; pesan tetap berada di antrean lokal"))
+            return
+        }
         val chatRef = db.collection("chats").document(chatId)
         val msgRef = chatRef.collection("messages").document(message.id)
 
