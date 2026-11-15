@@ -40,6 +40,10 @@ interface LocalMessageDao {
     @Query("UPDATE local_messages SET statusPesan = :statusPesan WHERE serverMsgId = :serverMsgId")
     suspend fun updateMessageStatus(serverMsgId: Long, statusPesan: String)
 
+    // Memperbarui satu baris antrean lokal secara unik, tanpa risiko bentrok timestamp.
+    @Query("UPDATE local_messages SET statusPesan = :statusPesan WHERE id = :localId")
+    suspend fun updateLocalMessageStatus(localId: Long, statusPesan: String)
+
     // Memperbarui ID server resmi dan status pesan setelah sinkronisasi berhasil
     @Query("UPDATE local_messages SET serverMsgId = :serverMsgId, statusPesan = :statusPesan WHERE id = :localId")
     suspend fun updateLocalMessageServerIdAndStatus(localId: Long, serverMsgId: Long, statusPesan: String)
