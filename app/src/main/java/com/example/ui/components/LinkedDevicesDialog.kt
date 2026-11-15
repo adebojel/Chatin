@@ -193,20 +193,23 @@ fun LinkedDevicesDialog(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Button(
-                        onClick = { isScanningQr = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                        onClick = { },
+                        enabled = false,
+                        colors = ButtonDefaults.buttonColors(
+                            disabledContainerColor = Color.White.copy(alpha = 0.08f),
+                            disabledContentColor = Color.White.copy(alpha = 0.55f)
+                        ),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
                             .testTag("link_device_button")
                     ) {
-                        Icon(imageVector = Icons.Default.AddLink, contentDescription = null, tint = Color(0xFF090D16))
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Tautkan Perangkat Baru",
+                            text = "Pairing QR belum tersedia",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF090D16),
                             fontSize = 14.sp
                         )
                     }
