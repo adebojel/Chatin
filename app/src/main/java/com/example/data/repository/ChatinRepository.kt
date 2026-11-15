@@ -10,6 +10,7 @@ import com.example.data.local.LocalMessage
 import com.example.data.local.LocalMessageDao
 import com.example.data.models.*
 import com.example.util.NetworkManager
+import com.example.util.PhoneNumberValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -177,7 +178,7 @@ class ChatinRepository(private val context: Context) {
 
     fun requestPhoneLogin(phone: String, activity: Activity? = null): Boolean {
         val normalizedPhone = phone.trim()
-        if (!normalizedPhone.matches(Regex("^\\+[1-9]\\d{7,14}$"))) {
+        if (!PhoneNumberValidator.isValidE164(normalizedPhone)) {
             _authUiState.update { it.copy(errorMessage = "Gunakan nomor internasional yang valid, contoh +628xxxxxxxxxx") }
             return false
         }
