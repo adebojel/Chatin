@@ -100,7 +100,7 @@ class ExampleRobolectricTest {
         repo.cacheIncomingMessageLocally(pendingMsg1)
         repo.cacheIncomingMessageLocally(pendingMsg2)
 
-        val pendingQueue = repo.localMessageDao.getAllPendingMessages()
+        val pendingQueue = repo.getPendingLocalMessages()
         assertTrue(pendingQueue.size >= 2)
         // Verify FIFO order (timestamp ASC)
         val timestamps = pendingQueue.map { it.timestamp }
