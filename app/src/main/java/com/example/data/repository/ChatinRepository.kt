@@ -315,5 +315,10 @@ class ChatinRepository(private val context: Context) {
     fun updateAccessibilitySettings(fontSizeScale: Float, highContrast: Boolean, displayDensityScale: Float = 1.0f) { _authUiState.update { state -> val updated = state.user?.copy(fontSizeScale = fontSizeScale, highContrastMode = highContrast, displayDensityScale = displayDensityScale); state.copy(user = updated) } }
     fun syncCloudServerData() { _authUiState.update { state -> val updated = state.user?.copy(lastCloudBackupTime = System.currentTimeMillis(), cloudSyncStatus = "Tersinkronisasi ke Server Cloud Chatin"); state.copy(user = updated) } }
     fun setCustomBackendServerUrl(url: String) { backendBaseUrl = url; prefs.edit().putString("backend_url", url).apply() }
-    fun logout() { prefs.edit().clear().apply(); loadInitialData() }
+    fun logout() {
+        pendingVerificationId = null
+        FirebaseManager.auth?.signOut()
+        prefs.edit().clear().apply()
+        loadInitialData()
+    }
 }
