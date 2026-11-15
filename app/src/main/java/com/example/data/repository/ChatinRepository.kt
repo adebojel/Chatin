@@ -97,12 +97,17 @@ class ChatinRepository(private val context: Context) {
     suspend fun resolveOfflineDataConflicts(currentUserId: Int, onSynced: (Long, Long) -> Unit) {
         try {
             val pendingMessages = localMessageDao.getAllPendingMessages()
-            for (local in pendingMessages) {
-                val serverMsgId = if (local.serverMsgId!= 0L) local.serverMsgId else System.currentTimeMillis()
-                localMessageDao.updateLocalMessageServerIdAndStatus(local.id, serverMsgId, "SENT")
-                onSynced(local.id, serverMsgId)
+            if (pendingMessages.isNotEmpty()) {
+                // Do not mark an outbox item as sent until a real server acknowledgement exists.
+                // The authenticated backend upload/reconciliation endpoint is not implemented yet.
+                Log.w(
+                    "ChatinRepository",
+                    "${pendingMessages.size} pesan masih PENDING; sinkronisasi server belum tersedia. Pesan dipertahankan di antrean lokal."
+                )
             }
-        } catch (e: Exception) { Log.e("ChatinRepository", "Gagal sinkronisasi: ${e.message}", e) }
+        } catch (e: Exception) {
+            Log.e("ChatinRepository", "Gagal membaca antrean offline: ${e.message}", e)
+        }
     }
 
     suspend fun cacheIncomingMessageLocally(message: LocalMessage) {
