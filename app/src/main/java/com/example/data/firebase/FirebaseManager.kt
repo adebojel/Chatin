@@ -176,7 +176,7 @@ object FirebaseManager {
                                     MessageType.TEXT
                                 },
                                 status = try {
-                                    MessageStatus.valueOf(doc.getString("status") ?: MessageStatus.READ.name)
+                                    MessageStatus.valueOf(doc.getString("status") ?: MessageStatus.SENT.name)
                                 } catch (e: Exception) {
                                     MessageStatus.READ
                                 },
@@ -185,7 +185,7 @@ object FirebaseManager {
                                 } catch (e: Exception) {
                                     DeliveryChannel.DATA_NETWORK
                                 },
-                                isFromMe = doc.getBoolean("isFromMe") ?: false,
+                                isFromMe = doc.getString("senderId") == auth?.currentUser?.uid,
                                 fileName = doc.getString("fileName"),
                                 fileSizeText = doc.getString("fileSizeText"),
                                 mediaUrl = doc.getString("mediaUrl"),
@@ -230,7 +230,7 @@ object FirebaseManager {
             "text" to message.text,
             "timestamp" to message.timestamp,
             "isFromMe" to message.isFromMe,
-            "status" to message.status.name,
+            "status" to MessageStatus.SENT.name,
             "type" to message.type.name,
             "channel" to message.deliveryChannel.name,
             "fileName" to message.fileName,
