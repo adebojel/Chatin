@@ -86,7 +86,11 @@ class ChatinRepository(private val context: Context) {
             bio = if (savedBio.isNotBlank()) savedBio else "Halo, saya pakai Chatin",
             isLoggedIn = true, isPhoneVerified = true
         )
-        _authUiState.value = AuthUiState(currentStep = AuthStep.AUTHENTICATED, user = initialUser)
+        _authUiState.value = AuthUiState(
+            currentStep = if (savedName.isBlank()) AuthStep.PROFILE_SETUP else AuthStep.AUTHENTICATED,
+            user = initialUser,
+            pendingPhoneNumber = savedPhone
+        )
         _contacts.value = emptyList()
         _conversations.value = emptyList()
         _messagesMap.value = emptyMap()
