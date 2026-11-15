@@ -105,16 +105,17 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `web linked devices pairing and unlinking`() {
+    fun `web device pairing is rejected until a verified session exists`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = ChatinRepository(context)
-        val initialCount = repo.linkedDevices.value.size
+        val initialDevices = repo.linkedDevices.value
+
         repo.linkNewWebDevice("Firefox Web Client", "Ubuntu Linux", "Bandung, Indonesia")
-        val updatedDevices = repo.linkedDevices.value
-        assertEquals(initialCount + 1, updatedDevices.size)
-        assertEquals("Firefox Web Client", updatedDevices.first().browserName)
-        val newDeviceId = updatedDevices.first().id
-        repo.unlinkDevice(newDeviceId)
-        assertEquals(initialCount, repo.linkedDevices.value.size)
+
+        assertEquals(initialDevices, repo.linkedDevices.value)
+        assertTrue(
+            repo.authUiState.value.errorMessage.orEmpty()
+                .contains("belum tersedia", ignoreCase = true)
+        )
     }
 }
