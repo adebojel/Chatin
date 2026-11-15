@@ -389,11 +389,19 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun syncDeviceContacts(deviceContacts: List<Contact>) { if (deviceContacts.isNotEmpty()) { _contacts.update { current -> val phoneSet = current.map { normalizePhone(it.phoneNumber) }.toSet(); val newOnes = deviceContacts.filterNot { phoneSet.contains(normalizePhone(it.phoneNumber)) }; current + newOnes } } }
-    fun backupChatToGoogle(accountEmail: String) { _authUiState.update { state -> val updatedUser = state.user?.copy(googleAccountEmail = accountEmail, lastGoogleBackupTime = System.currentTimeMillis()); state.copy(user = updatedUser) } }
+    fun backupChatToGoogle(accountEmail: String) {
+        _authUiState.update {
+            it.copy(errorMessage = "Cadangan Google Drive belum tersedia. Tidak ada data yang diklaim telah dicadangkan.")
+        }
+    }
     fun updatePrivacySettings(lastSeen: String, readReceipts: Boolean) { _authUiState.update { state -> val updated = state.user?.copy(privacyLastSeen = lastSeen, privacyReadReceipts = readReceipts); state.copy(user = updated) } }
     fun updateStorageSettings(autoDownloadWifi: Boolean, autoDownloadCellular: Boolean) { _authUiState.update { state -> val updated = state.user?.copy(mediaAutoDownloadWifi = autoDownloadWifi, mediaAutoDownloadCellular = autoDownloadCellular); state.copy(user = updated) } }
     fun updateAccessibilitySettings(fontSizeScale: Float, highContrast: Boolean, displayDensityScale: Float = 1.0f) { _authUiState.update { state -> val updated = state.user?.copy(fontSizeScale = fontSizeScale, highContrastMode = highContrast, displayDensityScale = displayDensityScale); state.copy(user = updated) } }
-    fun syncCloudServerData() { _authUiState.update { state -> val updated = state.user?.copy(lastCloudBackupTime = System.currentTimeMillis(), cloudSyncStatus = "Tersinkronisasi ke Server Cloud Chatin"); state.copy(user = updated) } }
+    fun syncCloudServerData() {
+        _authUiState.update {
+            it.copy(errorMessage = "Sinkronisasi cloud belum tersedia. Status data tidak akan ditandai tersinkronisasi tanpa konfirmasi server.")
+        }
+    }
     fun setCustomBackendServerUrl(url: String) { backendBaseUrl = url; prefs.edit().putString("backend_url", url).apply() }
     fun logout() {
         pendingVerificationId = null
