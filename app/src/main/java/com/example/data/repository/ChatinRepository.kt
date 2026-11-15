@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -120,7 +121,12 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun getMessagesForChat(chatId: String): List<Message> = _messagesMap.value[chatId]?: emptyList()
-    fun observeRealtimeMessages(chatId: String): Flow<List<Message>> = FirebaseManager.observeMessages(chatId)
+
+    /** Keep the repository cache in sync with the authoritative cross-device Firestore stream. */
+    fun observeRealtimeMessages(chatId: String): Flow<List<Message>> =
+        FirebaseManager.observeMessages(chatId).onEach { incomingMessages ->
+            _messagesMap.update { current -> current + (chatId to incomingMessages) }
+        }
 
     fun startOrGetChat(identifier: String): ChatConversation {
         val cleanIdentifier = normalizePhone(identifier)
