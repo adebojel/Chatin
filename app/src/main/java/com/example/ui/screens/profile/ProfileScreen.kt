@@ -589,7 +589,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(14.dp))
                     Text("Penggunaan Jaringan Chatin:", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("• VoIP WebRTC: 24.8 MB terkirim\n• Pesan & SMS: 3.2 MB terkirim", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text("Statistik penggunaan jaringan belum tersedia. Angka pemakaian tidak ditampilkan sebelum pengukuran jaringan benar-benar terhubung.", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
                 }
             },
             confirmButton = {
