@@ -158,6 +158,8 @@ class ChatinRepository(private val context: Context) {
                         serverMsgId = timestamp,
                         pengirimId = user?.id ?: 1,
                         penerimaId = 0,
+                        chatId = chatId,
+                        firebaseSenderUid = firebaseUid,
                         msgType = type.name.lowercase(),
                         textText = text,
                         cloudMediaUrl = mediaUrl,
