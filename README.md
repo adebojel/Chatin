@@ -273,4 +273,4 @@ Periksa file LICENSE di repository. Jika belum tersedia, hak penggunaan ulang da
 **Repository:** [github.com/adebojel/Chatin](https://github.com/adebojel/Chatin)  
 **Build Android:** [GitHub Actions — Android Debug APK](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
 **Pull request pengembangan:** [PR #3](https://github.com/adebojel/Chatin/pull/3)  
-**Terakhir diperbarui:** 15 November 2026, 09:44 WIB (UTC+7); dokumentasi setup build diperbarui kembali setelah perbaikan konfigurasi CI.
+**Terakhir diperbarui:** 15 November 2026, 09:46 WIB (UTC+7).
