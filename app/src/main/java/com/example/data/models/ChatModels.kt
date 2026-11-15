@@ -14,7 +14,7 @@ enum class MessageType {
 }
 
 /**
- * Status pesan untuk Read Receipt (Sesuai protokol WhatsApp/Signal)
+ * Status acknowledgement pesan. DELIVERED/READ hanya boleh dipakai jika ada receipt server/perangkat yang terverifikasi.
  */
 enum class MessageStatus {
     PENDING,     // Ikon jam pasir (dalam antrian offline lokal)
@@ -24,12 +24,12 @@ enum class MessageStatus {
 }
 
 /**
- * Saluran pengiriman pesan multi-jaringan
+ * Model label saluran pesan. RCS dan SMS fallback belum diimplementasikan oleh transport Chatin.
  */
 enum class DeliveryChannel {
     DATA_NETWORK, // Internet standar (Wi-Fi HD / Data Seluler 5G)
-    RCS_ADVANCED, // Rich Communication Services carrier
-    SMS_FALLBACK; // SMS operator GSM (Bebas kuota internet 0%)
+    RCS_ADVANCED, // Belum tersedia: belum ada integrasi RCS carrier
+    SMS_FALLBACK; // Belum tersedia: belum ada integrasi SMS operator
 
     companion object {
         val GSM_SMS = SMS_FALLBACK
@@ -56,7 +56,7 @@ data class Contact(
 )
 
 /**
- * Model Pesan E2EE dalam Memori Klien
+ * Model pesan dalam memori klien. Field model ini tidak menyatakan payload terenkripsi end-to-end.
  */
 data class Message(
     val id: String,
