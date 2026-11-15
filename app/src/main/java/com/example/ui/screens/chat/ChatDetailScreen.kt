@@ -219,6 +219,7 @@ fun ChatDetailScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
                                 onClick = onStartVoiceCall,
+                                enabled = false,
                                 modifier = Modifier.testTag("call_voice_button")
                             ) {
                                 Icon(
