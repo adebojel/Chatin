@@ -30,8 +30,6 @@ fun LinkedDevicesDialog(
     onUnlinkDevice: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var isScanningQr by remember { mutableStateOf(false) }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -99,65 +97,7 @@ fun LinkedDevicesDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (isScanningQr) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Arahkan Kamera ke QR Code di Web",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Buka web.chatin.app pada browser laptop atau buka Chatin Desktop Client",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.7f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(180.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFF151F33))
-                                .border(2.dp, Color(0xFF00E5FF), RoundedCornerShape(20.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = null,
-                                tint = Color(0xFF00E5FF),
-                                modifier = Modifier.size(100.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Button(
-                            onClick = {
-                                onLinkNewDevice("Google Chrome (Web)", "macOS / Windows", "Jakarta, Indonesia")
-                                isScanningQr = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.testTag("link_web_button")
-                        ) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Color(0xFF090D16))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Hubungkan Perangkat Browser", color = Color(0xFF090D16), fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(onClick = { isScanningQr = false }) {
-                            Text("Batal Scan", color = Color.White.copy(alpha = 0.7f))
-                        }
-                    }
-                } else {
-                    Surface(
+                Surface(
                         shape = RoundedCornerShape(18.dp),
                         color = Color(0xFF151F33),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
@@ -176,13 +116,13 @@ fun LinkedDevicesDialog(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "Enkripsi Web End-to-End",
+                                    text = "Pairing perangkat belum tersedia",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "Pesan, panggilan & media tersinkron aman real-time dengan komputer Anda.",
+                                    text = "Belum ada sesi web atau desktop yang diverifikasi oleh server Chatin.",
                                     fontSize = 11.sp,
                                     color = Color.White.copy(alpha = 0.7f)
                                 )
@@ -217,7 +157,7 @@ fun LinkedDevicesDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "STATUS PERANGKAT TERHUBUNG (${linkedDevices.size})",
+                        text = "SESI PERANGKAT TERVERIFIKASI (${linkedDevices.size})",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF00E5FF),
@@ -233,7 +173,7 @@ fun LinkedDevicesDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Belum ada sesi web / desktop yang terhubung.\nKetuk tombol di atas untuk menautkan.",
+                                text = "Belum ada sesi web atau desktop yang terhubung dan terverifikasi.",
                                 fontSize = 13.sp,
                                 color = Color.White.copy(alpha = 0.5f),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -296,7 +236,7 @@ fun LinkedDevicesDialog(
                                                     }
                                                 }
                                                 Text(
-                                                    text = if (device.isActive) "Aktif sekarang • ${device.location}" else "Terakhir aktif kemarin • ${device.location}",
+                                                    text = if (device.isActive) "Aktif • ${device.location}" else "Tidak aktif • ${device.location}",
                                                     fontSize = 11.sp,
                                                     color = if (device.isActive) Color(0xFF10B981) else Color.White.copy(alpha = 0.5f)
                                                 )
