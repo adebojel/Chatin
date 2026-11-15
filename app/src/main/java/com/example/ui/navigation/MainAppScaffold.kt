@@ -204,8 +204,13 @@ fun MainAppScaffold(
             containerColor = Color.Transparent,
             topBar = {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
-                    shadowElevation = 2.dp
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+                        shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)
+                    )
                 ) {
                     Row(
                         modifier = Modifier
