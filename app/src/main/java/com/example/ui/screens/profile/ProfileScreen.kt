@@ -311,9 +311,9 @@ fun ProfileScreen(
                 ProfileSettingRow(
                     icon = Icons.Default.CloudUpload,
                     iconColor = Color(0xFF10B981),
-                    title = "Bagikan Chat ke Akun Google",
-                    subtitle = "Cadangan ke Google Drive: $lastBackupStr",
-                    onClick = { showGoogleBackupDialog = true }
+                    title = "Cadangan Google Drive",
+                    subtitle = "Belum tersedia — tidak ada cadangan cloud yang dibuat",
+                    onClick = { }
                 )
                 HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
 
