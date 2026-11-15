@@ -10,14 +10,14 @@ import com.example.data.models.AppThemeMode
 
 private val ChatinDarkColorScheme = darkColorScheme(
     primary = WhatsAppLightGreen,
-    onPrimary = Color(0xFF06231F),
+    onPrimary = Color(0xFF06251D),
     primaryContainer = WhatsAppBubbleSentDark,
     onPrimaryContainer = WhatsAppTextPrimaryDark,
-    secondary = WhatsAppCheckmarkBlue,
-    onSecondary = Color(0xFF071923),
+    secondary = Color(0xFF82D8C0),
+    onSecondary = Color(0xFF09251E),
     secondaryContainer = WhatsAppDarkSurfaceVariant,
     onSecondaryContainer = WhatsAppTextPrimaryDark,
-    tertiary = RcsPurple,
+    tertiary = WhatsAppCheckmarkBlue,
     background = WhatsAppDarkBg,
     onBackground = WhatsAppTextPrimaryDark,
     surface = WhatsAppDarkSurface,
@@ -28,7 +28,7 @@ private val ChatinDarkColorScheme = darkColorScheme(
 )
 
 private val ChatinLightColorScheme = lightColorScheme(
-    primary = WhatsAppLightSurface,
+    primary = WhatsAppTeal,
     onPrimary = Color.White,
     primaryContainer = WhatsAppBubbleSentLight,
     onPrimaryContainer = WhatsAppTextPrimaryLight,
@@ -36,10 +36,10 @@ private val ChatinLightColorScheme = lightColorScheme(
     onSecondary = Color.White,
     secondaryContainer = WhatsAppLightSurfaceVariant,
     onSecondaryContainer = WhatsAppTextPrimaryLight,
-    tertiary = WhatsAppCheckmarkBlue,
+    tertiary = Color(0xFF2563EB),
     background = WhatsAppLightBg,
     onBackground = WhatsAppTextPrimaryLight,
-    surface = WhatsAppLightCard,
+    surface = WhatsAppLightSurface,
     onSurface = WhatsAppTextPrimaryLight,
     surfaceVariant = WhatsAppLightSurfaceVariant,
     onSurfaceVariant = WhatsAppTextSecondaryLight,
@@ -56,6 +56,7 @@ fun MyApplicationTheme(
         AppThemeMode.CLEAN_WHITE -> false
         AppThemeMode.SYSTEM_AUTO -> isSystemInDarkTheme()
     }
+
     MaterialTheme(
         colorScheme = if (isDark) ChatinDarkColorScheme else ChatinLightColorScheme,
         typography = Typography,
