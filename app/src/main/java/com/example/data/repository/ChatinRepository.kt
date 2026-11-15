@@ -285,7 +285,21 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun completeProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { updateProfile(displayName, bio, avatarUrl, coverUrl); _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }
-    fun updateProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { _authUiState.update { state -> val updatedUser = (state.user?: UserAccount()).copy(displayName = displayName, bio = bio, avatarUrl = avatarUrl, coverUrl = coverUrl); prefs.edit().putString("user_name", displayName).putString("user_bio", bio).apply(); state.copy(user = updatedUser) } }
+    fun updateProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") {
+        var updatedUser: UserAccount? = null
+        _authUiState.update { state ->
+            val updated = (state.user ?: UserAccount()).copy(
+                displayName = displayName.trim(),
+                bio = bio.trim(),
+                avatarUrl = avatarUrl,
+                coverUrl = coverUrl
+            )
+            updatedUser = updated
+            prefs.edit().putString("user_name", updated.displayName).putString("user_bio", updated.bio).apply()
+            state.copy(user = updated)
+        }
+        updatedUser?.let(FirebaseManager::saveUserProfile)
+    }
 
     fun addContact(name: String, phoneNumber: String, chatinId: String = ""): Contact {
         val cleanPhone = normalizePhone(phoneNumber)
