@@ -4,6 +4,12 @@ Chatin adalah aplikasi pesan Android dengan fondasi web client dan backend realt
 
 **Status: BETA DEVELOPMENT — BELUM SIAP PRODUKSI.** Autentikasi OTP Firebase dan sebagian alur pesan telah diperkuat, tetapi pengujian perangkat nyata, sinkronisasi offline, aturan keamanan Firestore, panggilan WebRTC, notifikasi push, dan enkripsi end-to-end penuh belum selesai. Jangan gunakan untuk percakapan rahasia atau data produksi.
 
+## Peringatan backend dan keamanan
+
+Folder backend saat ini masih prototipe dan **tidak boleh dideploy ke produksi**. Startup `server.js` kini menolak `NODE_ENV=production` sampai audit keamanan ditutup. WebAuthn, otorisasi Socket.IO, pengelolaan pre-key, privasi upload media, penyatuan identitas Firebase/backend, dan E2EE belum memenuhi syarat produksi.
+
+Baca [Audit Keamanan Backend](docs/BACKEND_SECURITY_AUDIT.md) sebelum menjalankan server. Jangan gunakan backend ini untuk data pengguna nyata.
+
 ## Pembaruan terbaru
 
 | Informasi | Nilai |
@@ -12,9 +18,9 @@ Chatin adalah aplikasi pesan Android dengan fondasi web client dan backend realt
 | Package ID | com.aistudio.chatin.kxqrvz |
 | Minimum Android | Android 7.0 / API 24 |
 | Target SDK | API 36 |
-| Waktu pembaruan README | **15 November 2026, 09:44 WIB (UTC+7)** |
+| Waktu pembaruan README | **16 November 2026** |
 | Branch pengembangan | feat/chatin-core-reliability |
-| Commit kode terakhir diperiksa | 3a2d775c0e9ee88794452f5e312ae17efd42c343 |
+| Commit kode terakhir diperiksa | cf9c14c9a80e47ec2c95c4c06770cdb45ed25540 |
 | Pull request | [PR #3 — Firebase phone verification & message reliability](https://github.com/adebojel/Chatin/pull/3) |
 
 ### Perubahan kode terbaru di branch pengembangan
@@ -34,7 +40,7 @@ Chatin adalah aplikasi pesan Android dengan fondasi web client dan backend realt
 
 ### Build uji coba (APK Debug)
 
-**[Buka hasil build Chatin di GitHub Actions](https://github.com/adebojel/Chatin/actions/runs/43669045895)**
+**[Buka workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)**
 
 Cara mengambil APK setelah workflow selesai:
 
