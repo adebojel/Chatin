@@ -293,6 +293,10 @@ object FirebaseManager {
             return
         }
         val verifiedPhone = currentUser.phoneNumber
+        if (user.firebaseUid.isNotBlank() && user.firebaseUid != currentUser.uid) {
+            Log.w(TAG, "Profile write rejected: profile UID does not match the Firebase session.")
+            return
+        }
         if (verifiedPhone.isNullOrBlank() || verifiedPhone != user.phoneNumber) {
             Log.w(TAG, "Profile write rejected: profile phone does not match the verified Firebase account.")
             return
