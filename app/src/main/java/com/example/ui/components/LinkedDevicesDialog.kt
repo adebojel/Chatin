@@ -78,7 +78,7 @@ fun LinkedDevicesDialog(
                                 color = Color.White
                             )
                             Text(
-                                text = "Chatin Web & Desktop Sync",
+                                text = "Status sesi perangkat",
                                 fontSize = 12.sp,
                                 color = Color(0xFF00E5FF)
                             )
@@ -108,9 +108,9 @@ fun LinkedDevicesDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Security,
+                                imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = Color(0xFF10B981),
+                                tint = Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.size(28.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
