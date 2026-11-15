@@ -138,14 +138,47 @@ class ChatinRepository(private val context: Context) {
         val senderName = user?.displayName?.takeIf { it.isNotBlank() }?: user?.phoneNumber?: "Saya"
         val timestamp = System.currentTimeMillis()
         val messageId = "msg_${UUID.randomUUID()}"
-        val newMessage = Message(id = messageId, chatId = chatId, senderId = "me", senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.SENT, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
+        val newMessage = Message(id = messageId, chatId = chatId, senderId = "me", senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.PENDING, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
         _messagesMap.update { currentMap -> val list = currentMap[chatId]?: emptyList(); currentMap + (chatId to (list + newMessage)) }
         _conversations.update { list -> list.map { conv -> if (conv.id == chatId) conv.copy(lastMessage = if (type == MessageType.TEXT) text else "[${type.name}] $text", lastMessageTimestamp = timestamp, lastDeliveryChannel = channel) else conv } }
         val contact = _conversations.value.find { it.id == chatId }?.contact
-        FirebaseManager.sendMessage(chatId = chatId, message = newMessage, contactName = contact?.name?: "Kontak", contactPhone = contact?.phoneNumber?: "", onSuccess = { Log.d("ChatinRepository", "Pesan terkirim") }, onError = { error -> Log.w("ChatinRepository", "Gagal: ${error.message}") })
         repositoryScope.launch {
-            try { localMessageDao.insertMessage(LocalMessage(serverMsgId = timestamp, pengirimId = user?.id?: 1, penerimaId = 0, msgType = type.name.lowercase(), textText = text, cloudMediaUrl = mediaUrl, statusPesan = "SENT", timestamp = timestamp)) }
-            catch (e: Exception) { Log.e("ChatinRepository", "Gagal insert Room: ${e.message}") }
+            try {
+                localMessageDao.insertMessage(
+                    LocalMessage(
+                        serverMsgId = timestamp,
+                        pengirimId = user?.id ?: 1,
+                        penerimaId = 0,
+                        msgType = type.name.lowercase(),
+                        textText = text,
+                        cloudMediaUrl = mediaUrl,
+                        statusPesan = "PENDING",
+                        timestamp = timestamp
+                    )
+                )
+                FirebaseManager.sendMessage(
+                    chatId = chatId,
+                    message = newMessage,
+                    contactName = contact?.name ?: "Kontak",
+                    contactPhone = contact?.phoneNumber ?: "",
+                    onSuccess = {
+                        repositoryScope.launch {
+                            localMessageDao.updateMessageStatus(timestamp, "SENT")
+                            _messagesMap.update { map ->
+                                map + (chatId to (map[chatId].orEmpty().map { msg ->
+                                    if (msg.id == messageId) msg.copy(status = MessageStatus.SENT) else msg
+                                }))
+                            }
+                        }
+                        Log.d("ChatinRepository", "Pesan mendapat acknowledgement Firestore")
+                    },
+                    onError = { error ->
+                        Log.w("ChatinRepository", "Pesan tetap PENDING: ${error.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("ChatinRepository", "Gagal menyimpan pesan ke antrean lokal: ${e.message}", e)
+            }
         }
     }
 
