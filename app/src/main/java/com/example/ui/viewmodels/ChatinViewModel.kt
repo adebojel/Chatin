@@ -217,9 +217,6 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
         // No WebRTC signaling/media transport or verified GSM call integration exists yet.
         // Do not display a fabricated active call or increment a fake call timer.
         _activeCallState.value = null
-        _authUiState.update {
-            it.copy(errorMessage = "Panggilan suara/video belum tersedia. Fitur tidak akan membuat panggilan palsu.")
-        }
     }
 
     fun endCall() {
