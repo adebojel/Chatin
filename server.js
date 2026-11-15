@@ -18,6 +18,12 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 require('dotenv').config();
 
+// Fail closed: this backend has not passed authentication, authorization,
+// WebAuthn, media privacy, and E2EE production reviews. Never expose it in production.
+if (process.env.NODE_ENV === 'production') {
+    throw new Error('Chatin backend prototype is blocked in production until the security audit blockers are resolved.');
+}
+
 // =====================================================================
 // 1. ANTI-CRASH GLOBAL ENGINE
 // =====================================================================
