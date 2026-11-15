@@ -55,8 +55,19 @@ class ChatinRepository(private val context: Context) {
         loadInitialData()
     }
 
+    /**
+     * Canonical phone key for deterministic one-to-one chat IDs.
+     * Indonesian local numbers (08...) and E.164 (+628...) resolve to the same key.
+     */
     private fun normalizePhone(phone: String): String {
-        return phone.replace("+", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "").takeLast(12)
+        val trimmed = phone.trim()
+        val digits = trimmed.filter { it.isDigit() }
+        return when {
+            trimmed.startsWith("+") -> digits
+            digits.startsWith("00") -> digits.drop(2)
+            digits.startsWith("0") -> "62" + digits.drop(1)
+            else -> digits
+        }
     }
 
     private fun loadInitialData() {
