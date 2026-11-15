@@ -274,3 +274,8 @@ Periksa file LICENSE di repository. Jika belum tersedia, hak penggunaan ulang da
 **Build Android:** [GitHub Actions — Android Debug APK](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
 **Pull request pengembangan:** [PR #3](https://github.com/adebojel/Chatin/pull/3)  
 **Terakhir diperbarui:** 15 November 2026, 11:26 WIB (UTC+7).
+
+
+## Pembaruan antrean offline (15 November 2026)
+- Room versi 2 menambahkan `chatId` dan `firebaseSenderUid` pada pesan lokal agar identitas percakapan dan pengirim tidak hilang di antrean PENDING; migrasi dari versi 1 disediakan.
+- FirebaseManager sekarang mengembalikan error eksplisit saat Firestore tidak tersedia, bukan keluar diam-diam tanpa callback.
