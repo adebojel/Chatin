@@ -58,7 +58,7 @@ android {
 secrets {
   // Keep Android build properties separate from the Node.js backend .env file.
   // local.properties remains local/ignored; local.defaults.properties provides safe CI defaults.
-  propertiesFileName = "local.properties"
+  propertiesFileName = "secrets.properties"
   defaultPropertiesFileName = "local.defaults.properties"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
