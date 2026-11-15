@@ -71,3 +71,21 @@ Belum ada source code pihak ketiga yang disalin ke Chatin melalui audit ini. Itu
 - Nextcloud Talk Android: https://github.com/nextcloud/talk-android
 - Firebase Quickstarts Android: https://github.com/firebase/quickstart-android
 - Firebase Android SDK: https://github.com/firebase/firebase-android-sdk
+
+
+## Kandidat tambahan yang diperiksa (16 November 2026)
+
+| Repository | Temuan yang dapat diverifikasi | Lisensi / keputusan |
+| --- | --- | --- |
+| [firebase/quickstart-android](https://github.com/firebase/quickstart-android) | Contoh resmi Firebase Android termasuk FCM service, token registration, permission notifikasi Android 13+, dan handler pesan. | Apache-2.0 (metadata GitHub). Referensi paling aman untuk pola FCM. Belum disalin: Chatin belum memiliki endpoint backend tepercaya untuk mengikat token instalasi ke Firebase UID dan mengirim notifikasi tanpa membocorkan isi pesan. |
+| [rvirayii-est/offline-first-kotlin-demo](https://github.com/rvirayii-est/offline-first-kotlin-demo) | Contoh Room transactional outbox, WorkManager retry/backoff, operation ID idempotent, serta dokumentasi pemisahan transport. Backend demo bersifat mock dan adapter Supabase/Spring Boot belum dikonfigurasi. | Lisensi belum diverifikasi pada audit ini. Tidak disalin. Pola arsitektur dapat menjadi bahan desain, tetapi implementasi mock tidak boleh dipakai untuk mengklaim sinkronisasi Chatin nyata. |
+| [Alidon256/Hi](https://github.com/Alidon256/Hi) | Aplikasi chat Android Kotlin/Firebase; README menyatakan Apache 2.0 dan menyebut Auth, Firestore, FCM, Storage. Metadata API GitHub tidak mengembalikan lisensi terverifikasi dalam pemeriksaan ini. | Tahan integrasi sampai file LICENSE, dependency, aturan Firestore, dan kualitas implementasi diperiksa langsung. Tidak disalin. |
+| [Nikhil-z/Kotlin-Android-sample](https://github.com/Nikhil-z/Kotlin-Android-sample) | Contoh Android Kotlin/Room/Retrofit/offline-first, tetapi bukan sistem messenger atau backend chat. | MIT (metadata GitHub). Tidak disalin karena transport contoh bukan layanan pesan dan tidak menyelesaikan kebutuhan otorisasi chat. |
+| [CodeWithBaji/OfflineTodoApp](https://github.com/CodeWithBaji/OfflineTodoApp) | Compose/Room/WorkManager sample yang secara eksplisit memakai FakeRemoteDataSource dan fake backend. | Tidak layak untuk integrasi produk; README menyebut backend palsu. Tidak disalin. |
+
+### Keputusan integrasi
+
+- Belum ada kode pihak ketiga baru yang disalin ke aplikasi. Repo yang memakai mock transport, tidak memiliki lisensi yang terverifikasi, atau tidak cocok dengan domain messenger tidak boleh digabung hanya demi menambah jumlah fitur.
+- Langkah FCM berikutnya harus mencakup Android `FirebaseMessagingService`, token lifecycle, izin notifikasi, server-side token registration yang memverifikasi Firebase ID token, pengiriman FCM melalui trusted server, serta penghapusan token saat logout. Sampai backend tersebut tersedia, push notification tetap belum tersedia.
+- Langkah offline berikutnya harus memakai transactional outbox, operation ID stabil, WorkManager unique work, retry/backoff, dan ack server yang mengikat UID + chat membership. Jangan menambahkan worker yang hanya mengirim ke mock endpoint.
+- Kandidat WebRTC harus diperiksa pada level SDK/API, lisensi transitive/native dependency, signaling, ICE/STUN/TURN, dan keamanan token. UI tombol panggilan saja bukan implementasi media call.
