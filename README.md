@@ -152,6 +152,10 @@ Langkah konfigurasi:
 
 Panduan lebih rinci: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md).
 
+### Android build properties
+
+Android Secrets Gradle Plugin menggunakan file local.properties (file lokal yang diabaikan Git) untuk nilai rahasia dan local.defaults.properties sebagai nilai aman saat CI atau saat file lokal belum tersedia. File local.defaults.properties sudah disediakan di repository dengan string kosong untuk integrasi opsional. Jangan menaruh key produksi di local.defaults.properties atau commit local.properties.
+
 **Jangan pernah mengirim OTP, password, private key, file service-account JSON, atau kredensial rahasia melalui chat/issue.** Jangan mengaktifkan aturan Firestore publik seperti allow read, write: if true.
 
 ### Skema Firestore yang digunakan saat ini
@@ -269,4 +273,4 @@ Periksa file LICENSE di repository. Jika belum tersedia, hak penggunaan ulang da
 **Repository:** [github.com/adebojel/Chatin](https://github.com/adebojel/Chatin)  
 **Build Android:** [GitHub Actions — Android Debug APK](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
 **Pull request pengembangan:** [PR #3](https://github.com/adebojel/Chatin/pull/3)  
-**Terakhir diperbarui:** 15 November 2026, 09:44 WIB (UTC+7).
+**Terakhir diperbarui:** 15 November 2026, 09:44 WIB (UTC+7); dokumentasi setup build diperbarui kembali setelah perbaikan konfigurasi CI.
