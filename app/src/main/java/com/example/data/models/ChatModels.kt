@@ -47,12 +47,12 @@ data class Contact(
     val chatinId: String,
     val avatarUrl: String = "",
     val avatarColorHex: Long = 0xFF00E5FF,
-    val statusMessage: String = "Menggunakan Chatin untuk komunikasi terenkripsi",
-    val isOnline: Boolean = true,
-    val lastSeenText: String = "Online",
+    val statusMessage: String = "",
+    val isOnline: Boolean = false,
+    val lastSeenText: String = "Status tidak diketahui",
     val isFavorite: Boolean = false,
-    val hasRcs: Boolean = true,
-    val allowsVoip: Boolean = true
+    val hasRcs: Boolean = false,
+    val allowsVoip: Boolean = false
 )
 
 /**
@@ -66,7 +66,7 @@ data class Message(
     val text: String,
     val timestamp: Long = System.currentTimeMillis(),
     val type: MessageType = MessageType.TEXT,
-    val status: MessageStatus = MessageStatus.READ,
+    val status: MessageStatus = MessageStatus.PENDING,
     val deliveryChannel: DeliveryChannel = DeliveryChannel.DATA_NETWORK,
     val isFromMe: Boolean = false,
     val mediaUrl: String? = null,
