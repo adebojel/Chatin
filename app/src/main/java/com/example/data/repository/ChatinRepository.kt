@@ -226,8 +226,18 @@ class ChatinRepository(private val context: Context) {
     fun setBiometricLockStatus(enabled: Boolean) { _securityState.update { it.copy(biometricStatus = if (enabled) BiometricLockStatus.ENABLED else BiometricLockStatus.DISABLED) } }
     fun updateSecurityConfig(lockType: LockType, secretCode: String) { _securityState.update { it.copy(lockType = lockType, secretCode = secretCode, isSetup = true) } }
     fun toggleHideChat(chatId: String) { _securityState.update { current -> val set = current.hiddenChatIds.toMutableSet(); if (set.contains(chatId)) set.remove(chatId) else set.add(chatId); current.copy(hiddenChatIds = set) } }
-    fun linkNewWebDevice(browser: String, os: String, location: String) { val newDev = WebLinkedDevice(id = "dev_${System.currentTimeMillis()}", browserName = browser, osName = os, location = location, lastActiveTime = System.currentTimeMillis(), isActive = true); _linkedDevices.update { listOf(newDev) + it } }
-    fun unlinkDevice(deviceId: String) { _linkedDevices.update { list -> list.filterNot { it.id == deviceId } } }
+    // Device pairing is intentionally unavailable until a real QR challenge,
+    // authenticated web session, and revocation endpoint are implemented.
+    fun linkNewWebDevice(browser: String, os: String, location: String) {
+        _authUiState.update {
+            it.copy(errorMessage = "Tautkan perangkat belum tersedia. Tidak ada perangkat contoh yang akan ditambahkan.")
+        }
+    }
+    fun unlinkDevice(deviceId: String) {
+        _authUiState.update {
+            it.copy(errorMessage = "Pemutusan perangkat belum tersedia karena layanan pairing perangkat belum terhubung.")
+        }
+    }
 
     fun requestChangePhoneNumber(newPhone: String, onResult: (Boolean, String) -> Unit) {
         if (!PhoneNumberValidator.isValidE164(newPhone)) {
