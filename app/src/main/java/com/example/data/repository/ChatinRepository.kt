@@ -153,7 +153,7 @@ class ChatinRepository(private val context: Context) {
         val contact = _conversations.value.find { it.id == chatId }?.contact
         repositoryScope.launch {
             try {
-                localMessageDao.insertMessage(
+                val localMessageRowId = localMessageDao.insertMessage(
                     LocalMessage(
                         serverMsgId = timestamp,
                         pengirimId = user?.id ?: 1,
@@ -174,7 +174,7 @@ class ChatinRepository(private val context: Context) {
                     contactPhone = contact?.phoneNumber ?: "",
                     onSuccess = {
                         repositoryScope.launch {
-                            localMessageDao.updateMessageStatus(timestamp, "SENT")
+                            localMessageDao.updateLocalMessageStatus(localMessageRowId, "SENT")
                             _messagesMap.update { map ->
                                 map + (chatId to (map[chatId].orEmpty().map { msg ->
                                     if (msg.id == messageId) msg.copy(status = MessageStatus.SENT) else msg
