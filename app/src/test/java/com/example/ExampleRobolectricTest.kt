@@ -53,28 +53,25 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `repository sends message with dual network channels`() {
+    fun `repository rejects message send without Firebase authentication`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = ChatinRepository(context)
         val conv = repo.startOrGetChat("08123456789")
         val chatId = conv.id
-        val initialCount = repo.getMessagesForChat(chatId).size
+        val initialMessages = repo.getMessagesForChat(chatId)
 
+        // Firebase Auth is not configured in this Robolectric test. The repository
+        // must reject the send rather than creating a fake locally-sent message.
         repo.sendMessage(
             chatId = chatId,
-            text = "Testing fallback SMS network",
+            text = "Testing unauthenticated send rejection",
             type = MessageType.TEXT,
             channel = DeliveryChannel.SMS_FALLBACK
         )
 
-        val updatedMessages = repo.getMessagesForChat(chatId)
-        assertEquals(initialCount + 1, updatedMessages.size)
-        val lastMsg = updatedMessages.last()
-        assertEquals("Testing fallback SMS network", lastMsg.text)
-        assertEquals(DeliveryChannel.SMS_FALLBACK, lastMsg.deliveryChannel)
-        assertTrue(lastMsg.isFromMe)
+        assertEquals(initialMessages, repo.getMessagesForChat(chatId))
+        assertTrue(repo.authUiState.value.errorMessage?.contains("Firebase") == true)
     }
-
     @Test
     fun `offline message caching and FIFO queue verification`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
