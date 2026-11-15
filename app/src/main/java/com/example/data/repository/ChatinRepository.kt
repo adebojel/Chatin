@@ -131,6 +131,9 @@ class ChatinRepository(private val context: Context) {
         catch (e: Exception) { Log.e("ChatinRepository", "Gagal simpan lokal: ${e.message}", e) }
     }
 
+    /** Read-only outbox snapshot exposed for repository-level sync and tests. */
+    suspend fun getPendingLocalMessages(): List<LocalMessage> = localMessageDao.getAllPendingMessages()
+
     fun getMessagesForChat(chatId: String): List<Message> = _messagesMap.value[chatId]?: emptyList()
 
     /** Keep the repository cache in sync with the authoritative cross-device Firestore stream. */
