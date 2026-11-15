@@ -176,7 +176,7 @@ object FirebaseManager {
                                     MessageType.TEXT
                                 },
                                 status = try {
-                                    MessageStatus.valueOf(doc.getString("status") ?: MessageStatus.SENT.name)
+                                    MessageStatus.valueOf(doc.getString("status") ?: MessageStatus.PENDING.name)
                                 } catch (e: Exception) {
                                     MessageStatus.READ
                                 },
