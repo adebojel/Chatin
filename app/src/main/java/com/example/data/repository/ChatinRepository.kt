@@ -199,16 +199,16 @@ class ChatinRepository(private val context: Context) {
     fun unlinkDevice(deviceId: String) { _linkedDevices.update { list -> list.filterNot { it.id == deviceId } } }
 
     fun requestChangePhoneNumber(newPhone: String, onResult: (Boolean, String) -> Unit) {
-        if (newPhone.isBlank() || newPhone.length < 7) { onResult(false, "Nomor telepon tidak valid"); return }
-        _authUiState.update { it.copy(lastSentOtp = "", pendingPhoneNumber = newPhone) }
-        onResult(true, "Kode verifikasi dikirim via SMS ke $newPhone")
+        if (!PhoneNumberValidator.isValidE164(newPhone)) {
+            onResult(false, "Nomor telepon tidak valid. Gunakan format internasional E.164.")
+            return
+        }
+        // Firebase account re-authentication and updatePhoneNumber are not wired into this flow yet.
+        onResult(false, "Perubahan nomor belum tersedia. Nomor akun tidak diubah karena verifikasi Firebase belum terhubung.")
     }
 
     fun verifyAndCommitNewPhoneNumber(newPhone: String, otpCode: String, onResult: (Boolean, String) -> Unit) {
-        if (otpCode.length == 6) {
-            _authUiState.update { state -> val updatedUser = state.user?.copy(phoneNumber = newPhone); prefs.edit().putString("user_phone", newPhone).apply(); state.copy(user = updatedUser, pendingPhoneNumber = "", lastSentOtp = "") }
-            onResult(true, "Nomor telepon berhasil diperbarui ke $newPhone")
-        } else { onResult(false, "Kode OTP salah atau telah kadaluarsa") }
+        onResult(false, "Perubahan nomor belum tersedia. Kode enam digit tidak dapat dianggap sebagai bukti verifikasi.")
     }
 
     fun updateTheme(newTheme: ThemeState) { _themeState.value = newTheme }
