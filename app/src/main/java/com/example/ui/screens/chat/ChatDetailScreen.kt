@@ -230,6 +230,7 @@ fun ChatDetailScreen(
                             }
                             IconButton(
                                 onClick = onStartVideoCall,
+                                enabled = false,
                                 modifier = Modifier.testTag("call_video_button")
                             ) {
                                 Icon(
@@ -240,6 +241,7 @@ fun ChatDetailScreen(
                             }
                             IconButton(
                                 onClick = onDialGsm,
+                                enabled = false,
                                 modifier = Modifier.testTag("call_gsm_fallback_button")
                             ) {
                                 Icon(
