@@ -139,10 +139,15 @@ class ChatinRepository(private val context: Context) {
 
     fun sendMessage(chatId: String, text: String, type: MessageType = MessageType.TEXT, channel: DeliveryChannel = DeliveryChannel.DATA_NETWORK, fileName: String? = null, fileSizeText: String? = null, mediaUrl: String? = null, durationSeconds: Int = 0) {
         val user = _authUiState.value.user
+        val firebaseUid = FirebaseManager.auth?.currentUser?.uid
+        if (firebaseUid.isNullOrBlank()) {
+            _authUiState.update { it.copy(errorMessage = "Sesi Firebase tidak aktif. Masuk kembali sebelum mengirim pesan.") }
+            return
+        }
         val senderName = user?.displayName?.takeIf { it.isNotBlank() }?: user?.phoneNumber?: "Saya"
         val timestamp = System.currentTimeMillis()
         val messageId = "msg_${UUID.randomUUID()}"
-        val newMessage = Message(id = messageId, chatId = chatId, senderId = "me", senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.PENDING, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
+        val newMessage = Message(id = messageId, chatId = chatId, senderId = firebaseUid, senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.PENDING, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
         _messagesMap.update { currentMap -> val list = currentMap[chatId]?: emptyList(); currentMap + (chatId to (list + newMessage)) }
         _conversations.update { list -> list.map { conv -> if (conv.id == chatId) conv.copy(lastMessage = if (type == MessageType.TEXT) text else "[${type.name}] $text", lastMessageTimestamp = timestamp, lastDeliveryChannel = channel) else conv } }
         val contact = _conversations.value.find { it.id == chatId }?.contact
