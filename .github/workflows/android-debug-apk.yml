@@ -46,6 +46,9 @@ jobs:
           path: ~/.android/debug.keystore
           key: chatin-debug-signing-key-v1
 
+      - name: Run Android unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
