@@ -26,6 +26,7 @@ class ChatinRepository(private val context: Context) {
     private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val localMessageDao: LocalMessageDao = AppLocalDatabase.getInstance(context).localMessageDao()
     private val prefs: SharedPreferences = context.getSharedPreferences("chatin_prefs", Context.MODE_PRIVATE)
+    @Volatile private var pendingVerificationId: String? = null
 
     val networkManager = NetworkManager(context)
     var backendBaseUrl: String = prefs.getString("backend_url", "https://api.chatin.app/v1")?: "https://api.chatin.app/v1"
@@ -57,12 +58,14 @@ class ChatinRepository(private val context: Context) {
     }
 
     private fun loadInitialData() {
-        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
-        val savedPhone = prefs.getString("user_phone", "")?.trim()?: ""
+        // A local preference is not proof of authentication. Trust only the persisted Firebase session.
+        val firebaseUser = FirebaseManager.auth?.currentUser
+        val savedPhone = firebaseUser?.phoneNumber?.trim().orEmpty()
         val savedName = prefs.getString("user_name", "")?.trim()?: ""
         val savedBio = prefs.getString("user_bio", "")?.trim()?: ""
 
-        if (!isLoggedIn || savedPhone.isBlank()) {
+        if (firebaseUser == null || savedPhone.isBlank()) {
+            prefs.edit().remove("is_logged_in").remove("user_phone").apply();
             val emptyUser = UserAccount(
                 id = 0, username = "", phoneNumber = "",
                 displayName = "", bio = "", isLoggedIn = false, isPhoneVerified = false
@@ -173,22 +176,83 @@ class ChatinRepository(private val context: Context) {
     fun setAuthStep(step: AuthStep) { _authUiState.update { it.copy(currentStep = step) } }
 
     fun requestPhoneLogin(phone: String, activity: Activity? = null): Boolean {
-        _authUiState.update { it.copy(pendingPhoneNumber = phone, lastSentOtp = "", currentStep = AuthStep.VERIFY_OTP) }
-        if (activity!= null) {
-            try { FirebaseManager.sendPhoneOtp(activity = activity, phoneNumber = phone, onCodeSent = { _ -> Log.d("ChatinRepository", "Firebase OTP sent") }, onVerificationCompleted = { _ -> _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }, onVerificationFailed = { error -> Log.w("ChatinRepository", "Firebase error: ${error.message}") }) }
-            catch (e: Exception) { Log.w("ChatinRepository", "Firebase send failed: ${e.message}") }
+        val normalizedPhone = phone.trim()
+        if (!normalizedPhone.matches(Regex("^\\+[1-9]\\d{7,14}$"))) {
+            _authUiState.update { it.copy(errorMessage = "Gunakan nomor internasional yang valid, contoh +628xxxxxxxxxx") }
+            return false
         }
-        return true
+        if (activity == null) {
+            _authUiState.update { it.copy(errorMessage = "Aktivitas Android tidak tersedia untuk mengirim OTP") }
+            return false
+        }
+        pendingVerificationId = null
+        _authUiState.update { it.copy(pendingPhoneNumber = normalizedPhone, lastSentOtp = "", errorMessage = null, isLoading = true) }
+        return try {
+            FirebaseManager.sendPhoneOtp(
+                activity = activity,
+                phoneNumber = normalizedPhone,
+                onCodeSent = { verificationId ->
+                    pendingVerificationId = verificationId
+                    _authUiState.update { it.copy(isLoading = false, currentStep = AuthStep.VERIFY_OTP, errorMessage = null) }
+                },
+                onVerificationCompleted = { credential ->
+                    val auth = FirebaseManager.auth
+                    if (auth == null) {
+                        _authUiState.update { it.copy(isLoading = false, errorMessage = "Firebase Authentication tidak tersedia") }
+                    } else {
+                        auth.signInWithCredential(credential)
+                            .addOnSuccessListener { result ->
+                                result.user?.let(::onFirebaseUserAuthenticated)
+                                    ?: _authUiState.update { it.copy(isLoading = false, errorMessage = "Akun Firebase tidak ditemukan") }
+                            }
+                            .addOnFailureListener { error ->
+                                _authUiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Verifikasi otomatis gagal") }
+                            }
+                    }
+                },
+                onVerificationFailed = { error ->
+                    Log.w("ChatinRepository", "Firebase OTP failed", error)
+                    _authUiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Gagal mengirim kode OTP") }
+                }
+            )
+            true
+        } catch (e: Exception) {
+            _authUiState.update { it.copy(isLoading = false, errorMessage = e.localizedMessage ?: "Gagal memulai verifikasi OTP") }
+            false
+        }
     }
 
+    private fun onFirebaseUserAuthenticated(firebaseUser: com.google.firebase.auth.FirebaseUser) {
+        val phone = firebaseUser.phoneNumber.orEmpty()
+        if (phone.isBlank()) {
+            _authUiState.update { it.copy(isLoading = false, errorMessage = "Akun Firebase tidak memiliki nomor telepon terverifikasi") }
+            return
+        }
+        pendingVerificationId = null
+        prefs.edit().putBoolean("is_logged_in", true).putString("user_phone", phone).apply()
+        val existing = _authUiState.value.user
+        val user = (existing ?: UserAccount()).copy(
+            id = 1,
+            username = normalizePhone(phone),
+            phoneNumber = phone,
+            displayName = existing?.displayName?.takeIf { it.isNotBlank() } ?: phone,
+            isLoggedIn = true,
+            isPhoneVerified = true
+        )
+        _authUiState.update { it.copy(user = user, pendingPhoneNumber = phone, currentStep = if (existing?.displayName.isNullOrBlank()) AuthStep.PROFILE_SETUP else AuthStep.AUTHENTICATED, isLoading = false, errorMessage = null) }
+        FirebaseManager.saveUserProfile(user)
+    }
+
+    // Password-only authentication is intentionally disabled until a real backend flow exists.
+    // Never create a locally authenticated session without Firebase credentials.
     fun login(usernameOrPhone: String, pass: String): Boolean {
-        _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(username = usernameOrPhone, isLoggedIn = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) }
-        return true
+        _authUiState.update { it.copy(errorMessage = "Login kata sandi belum tersedia. Gunakan verifikasi nomor telepon.") }
+        return false
     }
 
     fun register(username: String, phone: String, pass: String): Boolean {
-        _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(username = username, phoneNumber = phone, isLoggedIn = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) }
-        return true
+        _authUiState.update { it.copy(errorMessage = "Pendaftaran harus melalui verifikasi nomor telepon.") }
+        return false
     }
 
     fun resendOtp(activity: Activity? = null): String {
@@ -199,9 +263,25 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun verifyOtp(code: String): Boolean {
-        val valid = code.length == 6
-        if (valid) { _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(isLoggedIn = true, isPhoneVerified = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) } }
-        return valid
+        if (!code.matches(Regex("^\\d{6}$"))) {
+            _authUiState.update { it.copy(errorMessage = "Masukkan kode OTP 6 digit") }
+            return false
+        }
+        val verificationId = pendingVerificationId
+        if (verificationId.isNullOrBlank()) {
+            _authUiState.update { it.copy(errorMessage = "Permintaan OTP belum siap. Kirim ulang kode terlebih dahulu.") }
+            return false
+        }
+        _authUiState.update { it.copy(isLoading = true, errorMessage = null) }
+        FirebaseManager.signInWithOtpCode(
+            verificationId = verificationId,
+            smsCode = code,
+            onSuccess = ::onFirebaseUserAuthenticated,
+            onError = { error ->
+                _authUiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Kode OTP tidak valid atau kedaluwarsa") }
+            }
+        )
+        return true
     }
 
     fun completeProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { updateProfile(displayName, bio, avatarUrl, coverUrl); _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }
