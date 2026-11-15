@@ -93,7 +93,8 @@ class ChatinRepository(private val context: Context) {
         }
 
         val initialUser = UserAccount(
-            id = 1, username = normalizePhone(savedPhone), phoneNumber = savedPhone,
+            id = 0, firebaseUid = firebaseUser.uid,
+            username = normalizePhone(savedPhone), phoneNumber = savedPhone,
             displayName = if (savedName.isNotBlank()) savedName else savedPhone,
             bio = if (savedBio.isNotBlank()) savedBio else "Halo, saya pakai Chatin",
             isLoggedIn = true, isPhoneVerified = true
