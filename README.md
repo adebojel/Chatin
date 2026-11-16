@@ -2,6 +2,36 @@
 
 Chatin adalah aplikasi pesan Android dengan fondasi web client dan backend realtime.
 
+<p align="center">
+  <strong>Chatin • Android-first Messenger</strong><br/>
+  <em>Clean interface · Firebase identity · Realtime foundation</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml"><img alt="Android Debug CI" src="https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/adebojel/Chatin/pull/3"><img alt="Development PR" src="https://img.shields.io/badge/development-PR%20%233-blue"></a>
+  <img alt="Status" src="https://img.shields.io/badge/status-beta%20development-orange">
+</p>
+
+> **Tampilan dan screenshot:** repository saat ini belum menyimpan screenshot aplikasi yang diambil dari emulator/perangkat pada build tervalidasi. Gambar launcher bukan screenshot UI, sehingga tidak dipakai sebagai bukti tampilan. Screenshot layar masuk, inbox, percakapan, profil, serta tampilan tablet akan ditambahkan setelah pengambilan nyata dan pemeriksaan privasi. Jangan menganggap ilustrasi atau mockup sebagai tampilan aplikasi yang sudah berjalan.
+
+## Gambaran arsitektur
+
+```mermaid
+flowchart TB
+  A[Android App<br/>Kotlin + Jetpack Compose] --> B[Firebase Authentication<br/>Phone OTP]
+  A --> C[Cloud Firestore<br/>Realtime chat foundation]
+  A --> D[Room<br/>Local message queue]
+  E[Web Client<br/>public/] --> F[Node.js API<br/>Express + Socket.IO]
+  F --> G[(PostgreSQL)]
+  F --> H[Private media storage<br/>planned / not production]
+  C -. membership rules and trusted chat creation required .-> I[Security boundary]
+  D -. server acknowledgement and retry still required .-> C
+```
+
+Diagram menunjukkan komponen yang ada dan batas integrasi yang masih harus diselesaikan; bukan bukti bahwa semua jalur produksi sudah aktif.
+
+
 **Status: BETA DEVELOPMENT — BELUM SIAP PRODUKSI.** Autentikasi OTP Firebase dan sebagian alur pesan telah diperkuat, tetapi pengujian perangkat nyata, sinkronisasi offline, aturan keamanan Firestore, panggilan WebRTC, notifikasi push, dan enkripsi end-to-end penuh belum selesai. Jangan gunakan untuk percakapan rahasia atau data produksi.
 
 ## Peringatan backend dan keamanan
@@ -40,7 +70,7 @@ Baca [Audit Keamanan Backend](docs/BACKEND_SECURITY_AUDIT.md) sebelum menjalanka
 
 ### Build uji coba (APK Debug)
 
-**[Buka workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)**  
+**[Unduh artifact APK Debug yang sudah lulus build dan unit test](https://github.com/adebojel/Chatin/actions/runs/43741987519)** — artifact `chatin-debug-apk` tersedia pada bagian Artifacts (masa simpan 7 hari).\n\n[Semua workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
 **[Lihat hasil build Debug yang telah sukses (commit 35ac944)](https://github.com/adebojel/Chatin/actions/runs/43741987519)**
 
 Cara mengambil APK setelah workflow selesai:
@@ -140,6 +170,18 @@ Garis putus-putus menunjukkan komponen target yang belum selesai. Backend protot
 | Voice/video call WebRTC | Belum selesai | UI/fondasi bukan panggilan produksi |
 | Enkripsi end-to-end (E2EE) | Belum tersedia menyeluruh | Pesan saat ini dapat disimpan sebagai teks biasa |
 | Keamanan Firestore produksi | Belum selesai | Perlu UID membership, rules ketat, dan emulator tests |
+
+## Riset dan audit integrasi open-source
+
+Daftar repository, snapshot lisensi, evaluasi kompatibilitas, dan keputusan integrasi dicatat di [docs/OPEN_SOURCE_AUDIT.md](docs/OPEN_SOURCE_AUDIT.md). Kandidat utama yang ditelaah:
+
+- [LiveKit Android SDK](https://github.com/livekit/client-sdk-android) — kandidat POC audio/video realtime; belum diintegrasikan.
+- [GetStream WebRTC Android](https://github.com/GetStream/webrtc-android) — alternatif stack WebRTC; belum diintegrasikan.
+- [Firebase Android Quickstarts](https://github.com/firebase/quickstart-android) — pola resmi Auth, FCM, dan Firestore.
+- [Whizzz-The-ChatApp](https://github.com/uditbhaskar/Whizzz-The-ChatApp) — referensi Clean Architecture/MVI dan Firebase.
+- [Element X Android](https://github.com/element-hq/element-x-android) dan [Signal Android](https://github.com/signalapp/Signal-Android) — referensi arsitektur saja karena AGPL-3.0.
+
+**Belum ada kode pihak ketiga yang disalin ke aplikasi.** Integrasi dilakukan selektif setelah pemeriksaan lisensi, dependency transitif, keamanan, ukuran APK, dan kompatibilitas. Repo AGPL, repo tanpa lisensi yang jelas, dan demo dengan backend palsu tidak digabungkan begitu saja.
 
 ## Arsitektur dan teknologi
 
