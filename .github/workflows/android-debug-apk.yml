@@ -49,6 +49,9 @@ jobs:
       - name: Run Android unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
 
+      - name: Compile release variant configuration
+        run: gradle --no-daemon :app:compileReleaseJavaWithJavac
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
