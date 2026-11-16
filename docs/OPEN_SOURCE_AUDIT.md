@@ -89,3 +89,36 @@ Belum ada source code pihak ketiga yang disalin ke Chatin melalui audit ini. Itu
 - Langkah FCM berikutnya harus mencakup Android `FirebaseMessagingService`, token lifecycle, izin notifikasi, server-side token registration yang memverifikasi Firebase ID token, pengiriman FCM melalui trusted server, serta penghapusan token saat logout. Sampai backend tersebut tersedia, push notification tetap belum tersedia.
 - Langkah offline berikutnya harus memakai transactional outbox, operation ID stabil, WorkManager unique work, retry/backoff, dan ack server yang mengikat UID + chat membership. Jangan menambahkan worker yang hanya mengirim ke mock endpoint.
 - Kandidat WebRTC harus diperiksa pada level SDK/API, lisensi transitive/native dependency, signaling, ICE/STUN/TURN, dan keamanan token. UI tombol panggilan saja bukan implementasi media call.
+
+
+## Audit repository lanjutan: SDK dan fondasi aplikasi (16 November 2026)
+
+Pemeriksaan lanjutan dilakukan pada metadata GitHub dan dokumentasi repository. Angka bintang dan tanggal push bersifat snapshot saat audit, bukan ukuran kualitas atau jaminan keamanan.
+
+| Repository | Snapshot / lisensi | Komponen relevan | Keputusan teknis |
+| --- | --- | --- | --- |
+| [livekit/client-sdk-android](https://github.com/livekit/client-sdk-android) | Kotlin; Apache-2.0; 371 stars; aktif diperbarui 16 Nov 2026 | SDK Android untuk audio/video/data realtime dengan LiveKit Cloud atau server self-hosted | Kandidat utama POC panggilan. Tetap perlu token endpoint tepercaya, room authorization, TURN/media topology, foreground service, permission, audio routing, dan pengujian dua perangkat. Belum ditambahkan ke dependency aplikasi. |
+| [GetStream/webrtc-android](https://github.com/GetStream/webrtc-android) | Kotlin; Apache-2.0; 890 stars; push 5 Nov 2026 | Distribusi WebRTC Android terkompilasi, Kotlin extensions dan komponen Compose | Kandidat alternatif bila Chatin memilih membangun signaling dan media plane sendiri. Perlu evaluasi ukuran native ABI, benturan dependency WebRTC, lifecycle, ICE/TURN dan pemeliharaan. Jangan memasukkan bersama LiveKit sebelum pilihan arsitektur ditetapkan. |
+| [uditbhaskar/Whizzz-The-ChatApp](https://github.com/uditbhaskar/Whizzz-The-ChatApp) | Kotlin; MIT; 74 stars; push 27 Apr 2026 | Multi-module Clean Architecture/MVI, Firebase Auth, Realtime Database, FCM, Compose | Referensi pola pemisahan app/core/data/domain/feature/firebase/functions. Repository kecil dan riwayat commit terbatas; audit rules, Functions, dan dependency sebelum mengadopsi pola. Tidak menyalin seluruh aplikasi. |
+| [element-hq/element-x-android](https://github.com/element-hq/element-x-android) | Kotlin; AGPL-3.0; 2.5k stars; aktif diperbarui 16 Nov 2026 | Arsitektur messenger Compose modern, Matrix Rust SDK, navigasi, test UI, multi-device, room dan sync | Referensi arsitektur/UX dan studi protokol saja. Tidak menyalin kode tanpa keputusan lisensi AGPL atau lisensi komersial yang sesuai. Matrix Rust SDK bukan drop-in replacement untuk model Firebase Chatin. |
+| [zohrevand/dialogue](https://github.com/zohrevand/dialogue) | Kotlin; Apache-2.0; terakhir push 3 Sep 2022 | XMPP/Jabber client dengan Smack dan Jetpack Compose; pemisahan service XMPP dan feature modules | Contoh arsitektur protokol alternatif, tetapi sudah lama tidak aktif. Tidak dipakai untuk implementasi produksi tanpa pembaruan dependency, audit keamanan dan interop. |
+| [firebase/quickstart-android](https://github.com/firebase/quickstart-android) | Kotlin; Apache-2.0; 9.3k stars; aktif diperbarui 15 Nov 2026 | Sample resmi Firebase Auth, FCM, Firestore dan integrasi Android | Rujukan resmi implementasi Firebase. Pilih pola dan dependency yang relevan; jangan vendoring seluruh sample. FCM masih membutuhkan trusted server sender dan token ownership. |
+| [signalapp/Signal-Android](https://github.com/signalapp/Signal-Android) | Kotlin; AGPL-3.0 | Referensi desain messenger, attachment pipeline, database, protokol keamanan | Referensi threat model dan arsitektur saja; AGPL dan kompleksitas protokol menghalangi penyalinan langsung tanpa persetujuan. |
+| [element-hq/element-android](https://github.com/element-hq/element-android) | Kotlin; AGPL-3.0 | Matrix client generasi sebelumnya, masih mendapat security maintenance | Bukan basis kode baru; Element X adalah generasi berikutnya. Referensi historis saja. |
+
+### Prioritas implementasi yang disarankan
+
+1. **P0 — keamanan identitas dan chat**: satukan Firebase UID sebagai identitas otoritatif, buat chat/participant melalui trusted backend atau Cloud Functions, terapkan Firestore Rules berbasis membership, uji negatif dengan Firebase Emulator. Ini prasyarat sebelum pesan lintas akun dinyatakan aman.
+2. **P1 — reliability pesan**: Room transactional outbox dengan UUID operation ID, unique WorkManager jobs, exponential backoff, server idempotency, acknowledgement dan deduplication. Jangan menghapus pesan lokal saat upload gagal.
+3. **P2 — FCM**: registrasi token per instalasi yang diikat ke Firebase ID token, rotasi token, revoke saat logout, server-side FCM sender, Android 13+ notification permission, deep links, dan test delivery.
+4. **P3 — panggilan**: lakukan spike LiveKit terlebih dahulu karena SDK Android aktif dan Apache-2.0. Bangun endpoint token di server yang memverifikasi Firebase ID token serta otorisasi room. Uji audio-only, video, permission denial, background/foreground, Bluetooth, network switching, TURN, dan dua perangkat fisik. Jangan menggabungkan LiveKit dengan stack WebRTC lain pada saat yang sama.
+5. **P4 — media**: upload privat melalui signed URL berumur pendek, MIME sniffing, batas ukuran, checksum, antivirus bila diperlukan, metadata ownership dan deletion.
+6. **P5 — E2EE**: pilih protokol standar dan implementasi yang diaudit. Lakukan threat model, key lifecycle, multi-device, backup/recovery dan external review. Jangan mengiklankan E2EE sebelum interoperabilitas dan pengujian selesai.
+7. **P6 — UI/UX**: gunakan Material 3, Compose adaptive layouts, aksesibilitas TalkBack, state/loading/error/empty yang konsisten, animasi ringan dan screenshot dari build Chatin yang benar-benar berjalan.
+
+### Batasan pengambilan kode
+
+- Audit ini tidak berarti seluruh repository kandidat sudah diunduh atau semua file telah ditinjau baris demi baris.
+- Metadata lisensi repository tidak otomatis membuktikan lisensi semua aset, submodule, model, font, atau dependency transitif.
+- Tidak ada source code pihak ketiga yang disalin pada tahap ini. Integrasi dependency SDK akan dilakukan setelah pilihan arsitektur, versi, lisensi, minSdk, ukuran APK, dan pengujian kompatibilitas disetujui.
+- Hindari mengambil screenshot, logo, atau aset UI dari aplikasi lain lalu menampilkannya sebagai screenshot Chatin. Dokumentasi Chatin harus memakai screenshot aplikasi sendiri dari build yang tervalidasi.
