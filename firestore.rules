@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsUserDocument(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function validOwnProfile() {
+      return request.resource.data.uid == request.auth.uid
+        && request.resource.data.phoneNumber == request.auth.token.phone_number
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'username',
+          'phoneNumber',
+          'displayName',
+          'bio',
+          'avatarUrl',
+          'isOnline',
+          'lastUpdated',
+          'lastSeenTimestamp'
+        ])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 500
+        && request.resource.data.avatarUrl is string
+        && request.resource.data.avatarUrl.size() <= 2048
+        && request.resource.data.isOnline is bool;
+    }
+
+    match /users/{userId} {
+      allow read: if ownsUserDocument(userId);
+      allow create, update: if ownsUserDocument(userId) && validOwnProfile();
+      allow delete: if false;
+    }
+
+    // Chat creation, membership, messages and receipts are intentionally denied
+    // until a trusted server establishes participant UIDs and validated writes.
+    match /chats/{chatId} {
+      allow read, write: if false;
+
+      match /messages/{messageId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Deny every collection not explicitly listed above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
