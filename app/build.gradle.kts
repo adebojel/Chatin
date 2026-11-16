@@ -22,7 +22,7 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
-    signingConfigs {
+  signingConfigs {
     create("release") {
       storeFile = file("chatin-release.jks")
       storePassword = System.getenv("KEYSTORE_PASSWORD")
@@ -56,14 +56,16 @@ android {
 }
 
 secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
+  // Keep Android build properties separate from the Node.js backend .env file.
+  // local.properties remains local/ignored; local.defaults.properties provides safe CI defaults.
+  propertiesFileName = "secrets.properties"
+  defaultPropertiesFileName = "local.defaults.properties"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
-// FIX UTAMA BC 1.79 -> 1.78.1 UNTUK ERROR MAJOR 65
+// Pin BC dependencies to avoid incompatible major-version resolution.
 configurations.all {
   resolutionStrategy {
     force("org.bouncycastle:bcprov-jdk18on:1.78.1")

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" fill="none" role="img" aria-labelledby="title desc">
+<title id="title">Chatin system architecture</title><desc id="desc">Transparent isometric architecture illustration showing Android client, Firebase identity and chat, local offline database, and a secured backend prototype boundary.</desc>
+<defs>
+ <linearGradient id="a" x1="240" y1="120" x2="1120" y2="650" gradientUnits="userSpaceOnUse"><stop stop-color="#73F3DF"/><stop offset=".5" stop-color="#479CFF"/><stop offset="1" stop-color="#9B7BFF"/></linearGradient>
+ <linearGradient id="top" x1="400" y1="140" x2="900" y2="390" gradientUnits="userSpaceOnUse"><stop stop-color="#E2FBFF"/><stop offset="1" stop-color="#7FB8FF"/></linearGradient>
+ <linearGradient id="side" x1="400" y1="300" x2="900" y2="600" gradientUnits="userSpaceOnUse"><stop stop-color="#256B9F"/><stop offset="1" stop-color="#132B50"/></linearGradient>
+ <filter id="blur" x="100" y="40" width="1200" height="680" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="30"/></filter>
+</defs>
+<ellipse cx="700" cy="590" rx="520" ry="90" fill="#3A8EFF" opacity=".14" filter="url(#blur)"/>
+<g opacity=".7" stroke="url(#a)" stroke-width="2"><path d="M700 170v-65M385 370l-110 64M1010 370l110 64M700 520v90"/></g>
+<!-- platform -->
+<path d="M180 440 700 160l520 280-520 286L180 440Z" fill="#17385D" fill-opacity=".28" stroke="#91DDF7" stroke-opacity=".65" stroke-width="2"/>
+<path d="M180 440v42l520 286v-42L180 440Z" fill="#163D67" opacity=".75"/>
+<path d="M700 726v-42l520-286v42L700 726Z" fill="#102C4D" opacity=".9"/>
+<!-- phone -->
+<g>
+<path d="M280 365 420 288l139 78-139 79-140-80Z" fill="url(#top)" stroke="#C8F6FF" stroke-width="2"/>
+<path d="M280 365v120l140 80V445l-140-80Z" fill="#1B527D" stroke="#72C9F0"/>
+<path d="M420 445v120l139-80V365l-139 80Z" fill="#143A62" stroke="#72C9F0"/>
+<rect x="380" y="315" width="80" height="130" rx="14" transform="skewY(29)" fill="#0B1F3A" stroke="#8EE9F2" stroke-width="2"/>
+<path d="M394 365h50M394 380h38M394 395h48" stroke="#7DDDDC" stroke-width="6" stroke-linecap="round"/>
+</g>
+<!-- Firebase cloud -->
+<g>
+<path d="M575 225 715 148l140 78-140 79-140-80Z" fill="url(#top)" stroke="#C8F6FF" stroke-width="2"/>
+<path d="M575 225v120l140 80V305l-140-80Z" fill="#246A91" stroke="#78D9F3"/>
+<path d="M715 305v120l140-80V225l-140 80Z" fill="#194A76" stroke="#78D9F3"/>
+<path d="M665 235c-12-28 26-51 46-31 19-22 54-8 53 18 29 8 25 45-4 49H670c-24-1-27-28-5-36Z" fill="#E9FFFF" opacity=".92"/>
+<path d="M713 225l-14 31h17l-8 20 29-36h-18l8-15Z" fill="#238BCE"/>
+</g>
+<!-- room db -->
+<g>
+<path d="M870 390 1010 312l140 78-140 80-140-80Z" fill="url(#top)" stroke="#C8F6FF" stroke-width="2"/>
+<path d="M870 390v120l140 80V470l-140-80Z" fill="#205C85" stroke="#78D9F3"/>
+<path d="M1010 470v120l140-80V390l-140 80Z" fill="#153A63" stroke="#78D9F3"/>
+<ellipse cx="1010" cy="395" rx="72" ry="39" fill="#15395C" stroke="#A9F6EF" stroke-width="3"/>
+<path d="M938 395v58c0 21 32 39 72 39s72-18 72-39v-58" stroke="#A9F6EF" stroke-width="3"/>
+<path d="M938 424c0 21 32 39 72 39s72-18 72-39" stroke="#A9F6EF" stroke-width="2" opacity=".7"/>
+</g>
+<!-- secure backend prototype -->
+<g>
+<path d="M565 505 705 427l140 78-140 80-140-80Z" fill="#D7E9FF" fill-opacity=".85" stroke="#A7C8FF" stroke-width="2"/>
+<path d="M565 505v78l140 80v-78l-140-80Z" fill="#344A78" stroke="#9CB7FF"/>
+<path d="M705 585v78l140-80v-78l-140 80Z" fill="#252F5E" stroke="#9CB7FF"/>
+<path d="M705 470l28 16v32l-28 16-28-16v-32l28-16Z" fill="#8F9EFF"/>
+<path d="M692 505v-10a13 13 0 0 1 26 0v10" stroke="#172B50" stroke-width="5" stroke-linecap="round"/>
+<rect x="685" y="502" width="40" height="28" rx="6" fill="#172B50"/>
+</g>
+<g font-family="Inter,Arial,sans-serif" font-weight="700" text-anchor="middle">
+<text x="420" y="610" fill="#DDF7FF" font-size="24">ANDROID</text>
+<text x="715" y="110" fill="#DDF7FF" font-size="24">FIREBASE</text>
+<text x="1010" y="630" fill="#DDF7FF" font-size="24">ROOM · OFFLINE</text>
+<text x="705" y="700" fill="#C6D8FF" font-size="19">BACKEND PROTOTYPE · LOCKED</text>
+</g>
+<g fill="#A7FFF1"><circle cx="270" cy="260" r="6"/><circle cx="1120" cy="240" r="5"/><circle cx="930" cy="160" r="4"/></g>
+</svg>

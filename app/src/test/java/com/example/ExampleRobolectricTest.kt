@@ -17,7 +17,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class ExampleRobolectricTest {
 
     @Test
@@ -53,28 +53,25 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `repository sends message with dual network channels`() {
+    fun `repository rejects message send without Firebase authentication`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = ChatinRepository(context)
         val conv = repo.startOrGetChat("08123456789")
         val chatId = conv.id
-        val initialCount = repo.getMessagesForChat(chatId).size
+        val initialMessages = repo.getMessagesForChat(chatId)
 
+        // Firebase Auth is not configured in this Robolectric test. The repository
+        // must reject the send rather than creating a fake locally-sent message.
         repo.sendMessage(
             chatId = chatId,
-            text = "Testing fallback SMS network",
+            text = "Testing unauthenticated send rejection",
             type = MessageType.TEXT,
             channel = DeliveryChannel.SMS_FALLBACK
         )
 
-        val updatedMessages = repo.getMessagesForChat(chatId)
-        assertEquals(initialCount + 1, updatedMessages.size)
-        val lastMsg = updatedMessages.last()
-        assertEquals("Testing fallback SMS network", lastMsg.text)
-        assertEquals(DeliveryChannel.SMS_FALLBACK, lastMsg.deliveryChannel)
-        assertTrue(lastMsg.isFromMe)
+        assertEquals(initialMessages, repo.getMessagesForChat(chatId))
+        assertTrue(repo.authUiState.value.errorMessage?.contains("Firebase") == true)
     }
-
     @Test
     fun `offline message caching and FIFO queue verification`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -100,7 +97,7 @@ class ExampleRobolectricTest {
         repo.cacheIncomingMessageLocally(pendingMsg1)
         repo.cacheIncomingMessageLocally(pendingMsg2)
 
-        val pendingQueue = repo.localMessageDao.getAllPendingMessages()
+        val pendingQueue = repo.getPendingLocalMessages()
         assertTrue(pendingQueue.size >= 2)
         // Verify FIFO order (timestamp ASC)
         val timestamps = pendingQueue.map { it.timestamp }
@@ -108,16 +105,17 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `web linked devices pairing and unlinking`() {
+    fun `web device pairing is rejected until a verified session exists`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = ChatinRepository(context)
-        val initialCount = repo.linkedDevices.value.size
+        val initialDevices = repo.linkedDevices.value
+
         repo.linkNewWebDevice("Firefox Web Client", "Ubuntu Linux", "Bandung, Indonesia")
-        val updatedDevices = repo.linkedDevices.value
-        assertEquals(initialCount + 1, updatedDevices.size)
-        assertEquals("Firefox Web Client", updatedDevices.first().browserName)
-        val newDeviceId = updatedDevices.first().id
-        repo.unlinkDevice(newDeviceId)
-        assertEquals(initialCount, repo.linkedDevices.value.size)
+
+        assertEquals(initialDevices, repo.linkedDevices.value)
+        assertTrue(
+            repo.authUiState.value.errorMessage.orEmpty()
+                .contains("belum tersedia", ignoreCase = true)
+        )
     }
 }

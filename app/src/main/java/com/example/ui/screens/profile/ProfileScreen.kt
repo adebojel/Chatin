@@ -60,7 +60,6 @@ fun ProfileScreen(
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditBioDialog by remember { mutableStateOf(false) }
     var showChangePhoneDialog by remember { mutableStateOf(false) }
-    var showGoogleBackupDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showStorageDialog by remember { mutableStateOf(false) }
     var showAccessibilityDialog by remember { mutableStateOf(false) }
@@ -68,7 +67,6 @@ fun ProfileScreen(
 
     var nameInput by remember { mutableStateOf(user?.displayName ?: "") }
     var bioInput by remember { mutableStateOf(user?.bio ?: "") }
-    var googleEmailInput by remember { mutableStateOf(user?.googleAccountEmail.takeIf { !it.isNullOrBlank() } ?: "pengguna@gmail.com") }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -83,11 +81,6 @@ fun ProfileScreen(
         }
     }
 
-    val timeFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
-    val lastBackupStr = remember(user?.lastGoogleBackupTime) {
-        val time = user?.lastGoogleBackupTime ?: 0L
-        if (time > 0L) timeFormat.format(Date(time)) else "Belum dicadangkan"
-    }
 
     Column(
         modifier = modifier
@@ -311,9 +304,9 @@ fun ProfileScreen(
                 ProfileSettingRow(
                     icon = Icons.Default.CloudUpload,
                     iconColor = Color(0xFF10B981),
-                    title = "Bagikan Chat ke Akun Google",
-                    subtitle = "Cadangan ke Google Drive: $lastBackupStr",
-                    onClick = { showGoogleBackupDialog = true }
+                    title = "Cadangan Google Drive",
+                    subtitle = "Belum tersedia — tidak ada cadangan cloud yang dibuat",
+                    onClick = { }
                 )
                 HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
 
@@ -498,68 +491,6 @@ fun ProfileScreen(
         )
     }
 
-    // Google Backup Dialog
-    if (showGoogleBackupDialog) {
-        AlertDialog(
-            onDismissRequest = { showGoogleBackupDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text("Bagikan Chat ke Akun Google", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Cadangkan seluruh riwayat obrolan, kontak, dan media ke Google Drive atau ekspor ke Akun Google Anda.",
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.75f)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = googleEmailInput,
-                        onValueChange = { googleEmailInput = it },
-                        label = { Text("Akun Email Google") },
-                        placeholder = { Text("email@gmail.com") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF1E2A40),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text("Terakhir Dicadangkan:", fontSize = 11.sp, color = Color.White.copy(alpha = 0.6f))
-                            Text(lastBackupStr, fontSize = 12.sp, color = Color(0xFF00E5FF), fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onBackupChatToGoogle(googleEmailInput.trim())
-                        showGoogleBackupDialog = false
-                        Toast.makeText(context, "Riwayat chat berhasil dicadangkan ke akun Google $googleEmailInput!", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                ) {
-                    Text("Cadangkan Sekarang", color = Color(0xFF090D16), fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGoogleBackupDialog = false }) {
-                    Text("Batal", color = Color.White.copy(alpha = 0.7f))
-                }
-            },
-            containerColor = Color(0xFF131C2E),
-            shape = RoundedCornerShape(20.dp)
-        )
-    }
-
     // Privacy Dialog
     if (showPrivacyDialog) {
         var selectedLastSeen by remember { mutableStateOf(user?.privacyLastSeen ?: "Semua Orang") }
@@ -658,7 +589,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(14.dp))
                     Text("Penggunaan Jaringan Chatin:", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("• VoIP WebRTC: 24.8 MB terkirim\n• Pesan & SMS: 3.2 MB terkirim", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text("Statistik penggunaan jaringan belum tersedia. Angka pemakaian tidak ditampilkan sebelum pengukuran jaringan benar-benar terhubung.", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
                 }
             },
             confirmButton = {

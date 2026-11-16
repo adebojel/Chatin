@@ -2,42 +2,39 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// WhatsApp Official Color Palette
-val WhatsAppGreen = Color(0xFF00A884)
-val WhatsAppLightGreen = Color(0xFF25D366)
-val WhatsAppTeal = Color(0xFF128C7E)
-val WhatsAppDarkTeal = Color(0xFF075E54)
-val WhatsAppCheckmarkBlue = Color(0xFF53BDEB)
+// Chatin Aurora palette: calm emerald, deep ink and restrained glass surfaces.
+val WhatsAppGreen = Color(0xFF12B886)
+val WhatsAppLightGreen = Color(0xFF34D399)
+val WhatsAppTeal = Color(0xFF0F9F83)
+val WhatsAppDarkTeal = Color(0xFF08745F)
+val WhatsAppCheckmarkBlue = Color(0xFF60A5FA)
 
-// WhatsApp Dark Theme (Default)
-val WhatsAppDarkBg = Color(0xFF0B141A)
-val WhatsAppDarkSurface = Color(0xFF1F2C34)
-val WhatsAppDarkSurfaceVariant = Color(0xFF2A3942)
-val WhatsAppDarkCard = Color(0xFF182229)
-val WhatsAppTextPrimaryDark = Color(0xFFE9EDEF)
-val WhatsAppTextSecondaryDark = Color(0xFF8696A0)
-val WhatsAppDividerDark = Color(0xFF222D34)
+val WhatsAppDarkBg = Color(0xFF07131A)
+val WhatsAppDarkSurface = Color(0xCC12232C)
+val WhatsAppDarkSurfaceVariant = Color(0xB3263B45)
+val WhatsAppDarkCard = Color(0xB3142832)
+val WhatsAppTextPrimaryDark = Color(0xFFF1F7F8)
+val WhatsAppTextSecondaryDark = Color(0xFF9CB0B8)
+val WhatsAppDividerDark = Color(0x33D7E8EC)
 
-// WhatsApp Light Theme
-val WhatsAppLightBg = Color(0xFFFFFFFF)
-val WhatsAppLightSurface = Color(0xFF008069)
-val WhatsAppLightSurfaceVariant = Color(0xFFF0F2F5)
-val WhatsAppLightCard = Color(0xFFFFFFFF)
-val WhatsAppTextPrimaryLight = Color(0xFF111B21)
-val WhatsAppTextSecondaryLight = Color(0xFF667781)
-val WhatsAppDividerLight = Color(0xFFE9EDEF)
+val WhatsAppLightBg = Color(0xFFF4F8F7)
+val WhatsAppLightSurface = Color(0xFFFDFEFE)
+val WhatsAppLightSurfaceVariant = Color(0xFFEAF2F0)
+val WhatsAppLightCard = Color(0xEFFFFFFF)
+val WhatsAppTextPrimaryLight = Color(0xFF10231F)
+val WhatsAppTextSecondaryLight = Color(0xFF647873)
+val WhatsAppDividerLight = Color(0xFFDCE8E4)
 
-// Chat Bubbles (WhatsApp Authentic)
-val WhatsAppBubbleSentDark = Color(0xFF005C4B)
-val WhatsAppBubbleReceivedDark = Color(0xFF202C33)
-val WhatsAppBubbleSentLight = Color(0xFFE7FFDB)
+val WhatsAppBubbleSentDark = Color(0xFF075E4D)
+val WhatsAppBubbleReceivedDark = Color(0xFF1B3038)
+val WhatsAppBubbleSentLight = Color(0xFFDDF8EB)
 val WhatsAppBubbleReceivedLight = Color(0xFFFFFFFF)
 
-// Compatibility aliases
+// Compatibility aliases used by existing screens.
 val CyberBlue = WhatsAppGreen
-val ElectricViolet = WhatsAppTeal
+val ElectricViolet = Color(0xFF6688F5)
 val NeonCyan = WhatsAppLightGreen
-val NeonPink = Color(0xFFF15C6D)
+val NeonPink = Color(0xFFF47283)
 val WhatsAppEmerald = WhatsAppGreen
 val EmeraldDark = WhatsAppBubbleSentDark
 
@@ -57,11 +54,11 @@ val TextPrimaryLight = WhatsAppTextPrimaryLight
 val TextSecondaryLight = WhatsAppTextSecondaryLight
 val BorderLight = WhatsAppDividerLight
 
-val VoipWifiColor = Color(0xFF25D366)
-val VoipCellularColor = Color(0xFF34B7F1)
-val GsmFallbackColor = Color(0xFFF59E0B)
-val RcsPurple = Color(0xFF8B5CF6)
-val MissedCallRed = Color(0xFFF15C6D)
+val VoipWifiColor = Color(0xFF34D399)
+val VoipCellularColor = Color(0xFF60A5FA)
+val GsmFallbackColor = Color(0xFFFBBF24)
+val RcsPurple = Color(0xFFA78BFA)
+val MissedCallRed = Color(0xFFFB7185)
 
 val BubbleSentDark = WhatsAppBubbleSentDark
 val BubbleReceivedDark = WhatsAppBubbleReceivedDark

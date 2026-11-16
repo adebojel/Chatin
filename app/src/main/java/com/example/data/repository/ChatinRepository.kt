@@ -10,10 +10,12 @@ import com.example.data.local.LocalMessage
 import com.example.data.local.LocalMessageDao
 import com.example.data.models.*
 import com.example.util.NetworkManager
+import com.example.util.PhoneNumberValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,7 @@ class ChatinRepository(private val context: Context) {
     private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val localMessageDao: LocalMessageDao = AppLocalDatabase.getInstance(context).localMessageDao()
     private val prefs: SharedPreferences = context.getSharedPreferences("chatin_prefs", Context.MODE_PRIVATE)
+    @Volatile private var pendingVerificationId: String? = null
 
     val networkManager = NetworkManager(context)
     var backendBaseUrl: String = prefs.getString("backend_url", "https://api.chatin.app/v1")?: "https://api.chatin.app/v1"
@@ -52,17 +55,30 @@ class ChatinRepository(private val context: Context) {
         loadInitialData()
     }
 
+    /**
+     * Canonical phone key for deterministic one-to-one chat IDs.
+     * Indonesian local numbers (08...) and E.164 (+628...) resolve to the same key.
+     */
     private fun normalizePhone(phone: String): String {
-        return phone.replace("+", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "").takeLast(12)
+        val trimmed = phone.trim()
+        val digits = trimmed.filter { it.isDigit() }
+        return when {
+            trimmed.startsWith("+") -> digits
+            digits.startsWith("00") -> digits.drop(2)
+            digits.startsWith("0") -> "62" + digits.drop(1)
+            else -> digits
+        }
     }
 
     private fun loadInitialData() {
-        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
-        val savedPhone = prefs.getString("user_phone", "")?.trim()?: ""
+        // A local preference is not proof of authentication. Trust only the persisted Firebase session.
+        val firebaseUser = FirebaseManager.auth?.currentUser
+        val savedPhone = firebaseUser?.phoneNumber?.trim().orEmpty()
         val savedName = prefs.getString("user_name", "")?.trim()?: ""
         val savedBio = prefs.getString("user_bio", "")?.trim()?: ""
 
-        if (!isLoggedIn || savedPhone.isBlank()) {
+        if (firebaseUser == null || savedPhone.isBlank()) {
+            prefs.edit().remove("is_logged_in").remove("user_phone").apply();
             val emptyUser = UserAccount(
                 id = 0, username = "", phoneNumber = "",
                 displayName = "", bio = "", isLoggedIn = false, isPhoneVerified = false
@@ -77,12 +93,17 @@ class ChatinRepository(private val context: Context) {
         }
 
         val initialUser = UserAccount(
-            id = 1, username = normalizePhone(savedPhone), phoneNumber = savedPhone,
+            id = 0, firebaseUid = firebaseUser.uid,
+            username = normalizePhone(savedPhone), phoneNumber = savedPhone,
             displayName = if (savedName.isNotBlank()) savedName else savedPhone,
             bio = if (savedBio.isNotBlank()) savedBio else "Halo, saya pakai Chatin",
             isLoggedIn = true, isPhoneVerified = true
         )
-        _authUiState.value = AuthUiState(currentStep = AuthStep.AUTHENTICATED, user = initialUser)
+        _authUiState.value = AuthUiState(
+            currentStep = if (savedName.isBlank()) AuthStep.PROFILE_SETUP else AuthStep.AUTHENTICATED,
+            user = initialUser,
+            pendingPhoneNumber = savedPhone
+        )
         _contacts.value = emptyList()
         _conversations.value = emptyList()
         _messagesMap.value = emptyMap()
@@ -93,12 +114,17 @@ class ChatinRepository(private val context: Context) {
     suspend fun resolveOfflineDataConflicts(currentUserId: Int, onSynced: (Long, Long) -> Unit) {
         try {
             val pendingMessages = localMessageDao.getAllPendingMessages()
-            for (local in pendingMessages) {
-                val serverMsgId = if (local.serverMsgId!= 0L) local.serverMsgId else System.currentTimeMillis()
-                localMessageDao.updateLocalMessageServerIdAndStatus(local.id, serverMsgId, "SENT")
-                onSynced(local.id, serverMsgId)
+            if (pendingMessages.isNotEmpty()) {
+                // Do not mark an outbox item as sent until a real server acknowledgement exists.
+                // The authenticated backend upload/reconciliation endpoint is not implemented yet.
+                Log.w(
+                    "ChatinRepository",
+                    "${pendingMessages.size} pesan masih PENDING; sinkronisasi server belum tersedia. Pesan dipertahankan di antrean lokal."
+                )
             }
-        } catch (e: Exception) { Log.e("ChatinRepository", "Gagal sinkronisasi: ${e.message}", e) }
+        } catch (e: Exception) {
+            Log.e("ChatinRepository", "Gagal membaca antrean offline: ${e.message}", e)
+        }
     }
 
     suspend fun cacheIncomingMessageLocally(message: LocalMessage) {
@@ -106,8 +132,16 @@ class ChatinRepository(private val context: Context) {
         catch (e: Exception) { Log.e("ChatinRepository", "Gagal simpan lokal: ${e.message}", e) }
     }
 
+    /** Read-only outbox snapshot exposed for repository-level sync and tests. */
+    suspend fun getPendingLocalMessages(): List<LocalMessage> = localMessageDao.getAllPendingMessages()
+
     fun getMessagesForChat(chatId: String): List<Message> = _messagesMap.value[chatId]?: emptyList()
-    fun observeRealtimeMessages(chatId: String): Flow<List<Message>> = FirebaseManager.observeMessages(chatId)
+
+    /** Keep the repository cache in sync with the authoritative cross-device Firestore stream. */
+    fun observeRealtimeMessages(chatId: String): Flow<List<Message>> =
+        FirebaseManager.observeMessages(chatId).onEach { incomingMessages ->
+            _messagesMap.update { current -> current + (chatId to incomingMessages) }
+        }
 
     fun startOrGetChat(identifier: String): ChatConversation {
         val cleanIdentifier = normalizePhone(identifier)
@@ -126,17 +160,57 @@ class ChatinRepository(private val context: Context) {
 
     fun sendMessage(chatId: String, text: String, type: MessageType = MessageType.TEXT, channel: DeliveryChannel = DeliveryChannel.DATA_NETWORK, fileName: String? = null, fileSizeText: String? = null, mediaUrl: String? = null, durationSeconds: Int = 0) {
         val user = _authUiState.value.user
+        val firebaseUid = FirebaseManager.auth?.currentUser?.uid
+        if (firebaseUid.isNullOrBlank()) {
+            _authUiState.update { it.copy(errorMessage = "Sesi Firebase tidak aktif. Masuk kembali sebelum mengirim pesan.") }
+            return
+        }
         val senderName = user?.displayName?.takeIf { it.isNotBlank() }?: user?.phoneNumber?: "Saya"
         val timestamp = System.currentTimeMillis()
         val messageId = "msg_${UUID.randomUUID()}"
-        val newMessage = Message(id = messageId, chatId = chatId, senderId = "me", senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.SENT, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
+        val newMessage = Message(id = messageId, chatId = chatId, senderId = firebaseUid, senderName = senderName, text = text, timestamp = timestamp, type = type, status = MessageStatus.PENDING, deliveryChannel = channel, isFromMe = true, fileName = fileName, fileSizeText = fileSizeText, mediaUrl = mediaUrl, mediaDurationSeconds = durationSeconds)
         _messagesMap.update { currentMap -> val list = currentMap[chatId]?: emptyList(); currentMap + (chatId to (list + newMessage)) }
         _conversations.update { list -> list.map { conv -> if (conv.id == chatId) conv.copy(lastMessage = if (type == MessageType.TEXT) text else "[${type.name}] $text", lastMessageTimestamp = timestamp, lastDeliveryChannel = channel) else conv } }
         val contact = _conversations.value.find { it.id == chatId }?.contact
-        FirebaseManager.sendMessage(chatId = chatId, message = newMessage, contactName = contact?.name?: "Kontak", contactPhone = contact?.phoneNumber?: "", onSuccess = { Log.d("ChatinRepository", "Pesan terkirim") }, onError = { error -> Log.w("ChatinRepository", "Gagal: ${error.message}") })
         repositoryScope.launch {
-            try { localMessageDao.insertMessage(LocalMessage(serverMsgId = timestamp, pengirimId = user?.id?: 1, penerimaId = 0, msgType = type.name.lowercase(), textText = text, cloudMediaUrl = mediaUrl, statusPesan = "SENT", timestamp = timestamp)) }
-            catch (e: Exception) { Log.e("ChatinRepository", "Gagal insert Room: ${e.message}") }
+            try {
+                val localMessageRowId = localMessageDao.insertMessage(
+                    LocalMessage(
+                        serverMsgId = timestamp,
+                        pengirimId = user?.id ?: 1,
+                        penerimaId = 0,
+                        chatId = chatId,
+                        firebaseSenderUid = firebaseUid,
+                        msgType = type.name.lowercase(),
+                        textText = text,
+                        cloudMediaUrl = mediaUrl,
+                        statusPesan = "PENDING",
+                        timestamp = timestamp
+                    )
+                )
+                FirebaseManager.sendMessage(
+                    chatId = chatId,
+                    message = newMessage,
+                    contactName = contact?.name ?: "Kontak",
+                    contactPhone = contact?.phoneNumber ?: "",
+                    onSuccess = {
+                        repositoryScope.launch {
+                            localMessageDao.updateLocalMessageStatus(localMessageRowId, "SENT")
+                            _messagesMap.update { map ->
+                                map + (chatId to (map[chatId].orEmpty().map { msg ->
+                                    if (msg.id == messageId) msg.copy(status = MessageStatus.SENT) else msg
+                                }))
+                            }
+                        }
+                        Log.d("ChatinRepository", "Pesan mendapat acknowledgement Firestore")
+                    },
+                    onError = { error ->
+                        Log.w("ChatinRepository", "Pesan tetap PENDING: ${error.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("ChatinRepository", "Gagal menyimpan pesan ke antrean lokal: ${e.message}", e)
+            }
         }
     }
 
@@ -153,42 +227,113 @@ class ChatinRepository(private val context: Context) {
     fun setBiometricLockStatus(enabled: Boolean) { _securityState.update { it.copy(biometricStatus = if (enabled) BiometricLockStatus.ENABLED else BiometricLockStatus.DISABLED) } }
     fun updateSecurityConfig(lockType: LockType, secretCode: String) { _securityState.update { it.copy(lockType = lockType, secretCode = secretCode, isSetup = true) } }
     fun toggleHideChat(chatId: String) { _securityState.update { current -> val set = current.hiddenChatIds.toMutableSet(); if (set.contains(chatId)) set.remove(chatId) else set.add(chatId); current.copy(hiddenChatIds = set) } }
-    fun linkNewWebDevice(browser: String, os: String, location: String) { val newDev = WebLinkedDevice(id = "dev_${System.currentTimeMillis()}", browserName = browser, osName = os, location = location, lastActiveTime = System.currentTimeMillis(), isActive = true); _linkedDevices.update { listOf(newDev) + it } }
-    fun unlinkDevice(deviceId: String) { _linkedDevices.update { list -> list.filterNot { it.id == deviceId } } }
+    // Device pairing is intentionally unavailable until a real QR challenge,
+    // authenticated web session, and revocation endpoint are implemented.
+    fun linkNewWebDevice(browser: String, os: String, location: String) {
+        _authUiState.update {
+            it.copy(errorMessage = "Tautkan perangkat belum tersedia. Tidak ada perangkat contoh yang akan ditambahkan.")
+        }
+    }
+    fun unlinkDevice(deviceId: String) {
+        _authUiState.update {
+            it.copy(errorMessage = "Pemutusan perangkat belum tersedia karena layanan pairing perangkat belum terhubung.")
+        }
+    }
 
     fun requestChangePhoneNumber(newPhone: String, onResult: (Boolean, String) -> Unit) {
-        if (newPhone.isBlank() || newPhone.length < 7) { onResult(false, "Nomor telepon tidak valid"); return }
-        _authUiState.update { it.copy(lastSentOtp = "", pendingPhoneNumber = newPhone) }
-        onResult(true, "Kode verifikasi dikirim via SMS ke $newPhone")
+        if (!PhoneNumberValidator.isValidE164(newPhone)) {
+            onResult(false, "Nomor telepon tidak valid. Gunakan format internasional E.164.")
+            return
+        }
+        // Firebase account re-authentication and updatePhoneNumber are not wired into this flow yet.
+        onResult(false, "Perubahan nomor belum tersedia. Nomor akun tidak diubah karena verifikasi Firebase belum terhubung.")
     }
 
     fun verifyAndCommitNewPhoneNumber(newPhone: String, otpCode: String, onResult: (Boolean, String) -> Unit) {
-        if (otpCode.length == 6) {
-            _authUiState.update { state -> val updatedUser = state.user?.copy(phoneNumber = newPhone); prefs.edit().putString("user_phone", newPhone).apply(); state.copy(user = updatedUser, pendingPhoneNumber = "", lastSentOtp = "") }
-            onResult(true, "Nomor telepon berhasil diperbarui ke $newPhone")
-        } else { onResult(false, "Kode OTP salah atau telah kadaluarsa") }
+        onResult(false, "Perubahan nomor belum tersedia. Kode enam digit tidak dapat dianggap sebagai bukti verifikasi.")
     }
 
     fun updateTheme(newTheme: ThemeState) { _themeState.value = newTheme }
     fun setAuthStep(step: AuthStep) { _authUiState.update { it.copy(currentStep = step) } }
 
     fun requestPhoneLogin(phone: String, activity: Activity? = null): Boolean {
-        _authUiState.update { it.copy(pendingPhoneNumber = phone, lastSentOtp = "", currentStep = AuthStep.VERIFY_OTP) }
-        if (activity!= null) {
-            try { FirebaseManager.sendPhoneOtp(activity = activity, phoneNumber = phone, onCodeSent = { _ -> Log.d("ChatinRepository", "Firebase OTP sent") }, onVerificationCompleted = { _ -> _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }, onVerificationFailed = { error -> Log.w("ChatinRepository", "Firebase error: ${error.message}") }) }
-            catch (e: Exception) { Log.w("ChatinRepository", "Firebase send failed: ${e.message}") }
+        val normalizedPhone = phone.trim()
+        if (!PhoneNumberValidator.isValidE164(normalizedPhone)) {
+            _authUiState.update { it.copy(errorMessage = "Gunakan nomor internasional yang valid, contoh +628xxxxxxxxxx") }
+            return false
         }
-        return true
+        if (activity == null) {
+            _authUiState.update { it.copy(errorMessage = "Aktivitas Android tidak tersedia untuk mengirim OTP") }
+            return false
+        }
+        pendingVerificationId = null
+        _authUiState.update { it.copy(pendingPhoneNumber = normalizedPhone, lastSentOtp = "", errorMessage = null, isLoading = true) }
+        return try {
+            FirebaseManager.sendPhoneOtp(
+                activity = activity,
+                phoneNumber = normalizedPhone,
+                onCodeSent = { verificationId ->
+                    pendingVerificationId = verificationId
+                    _authUiState.update { it.copy(isLoading = false, currentStep = AuthStep.VERIFY_OTP, errorMessage = null) }
+                },
+                onVerificationCompleted = { credential ->
+                    val auth = FirebaseManager.auth
+                    if (auth == null) {
+                        _authUiState.update { it.copy(isLoading = false, errorMessage = "Firebase Authentication tidak tersedia") }
+                    } else {
+                        auth.signInWithCredential(credential)
+                            .addOnSuccessListener { result ->
+                                result.user?.let(::onFirebaseUserAuthenticated)
+                                    ?: _authUiState.update { it.copy(isLoading = false, errorMessage = "Akun Firebase tidak ditemukan") }
+                            }
+                            .addOnFailureListener { error ->
+                                _authUiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Verifikasi otomatis gagal") }
+                            }
+                    }
+                },
+                onVerificationFailed = { error ->
+                    Log.w("ChatinRepository", "Firebase OTP failed", error)
+                    _authUiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Gagal mengirim kode OTP") }
+                }
+            )
+            true
+        } catch (e: Exception) {
+            _authUiState.update { it.copy(isLoading = false, errorMessage = e.localizedMessage ?: "Gagal memulai verifikasi OTP") }
+            false
+        }
     }
 
+    private fun onFirebaseUserAuthenticated(firebaseUser: com.google.firebase.auth.FirebaseUser) {
+        val phone = firebaseUser.phoneNumber.orEmpty()
+        if (phone.isBlank()) {
+            _authUiState.update { it.copy(isLoading = false, errorMessage = "Akun Firebase tidak memiliki nomor telepon terverifikasi") }
+            return
+        }
+        pendingVerificationId = null
+        prefs.edit().putBoolean("is_logged_in", true).putString("user_phone", phone).apply()
+        val existing = _authUiState.value.user
+        val user = (existing ?: UserAccount()).copy(
+            id = 1,
+            username = normalizePhone(phone),
+            phoneNumber = phone,
+            displayName = existing?.displayName?.takeIf { it.isNotBlank() } ?: phone,
+            isLoggedIn = true,
+            isPhoneVerified = true
+        )
+        _authUiState.update { it.copy(user = user, pendingPhoneNumber = phone, currentStep = if (existing?.displayName.isNullOrBlank()) AuthStep.PROFILE_SETUP else AuthStep.AUTHENTICATED, isLoading = false, errorMessage = null) }
+        FirebaseManager.saveUserProfile(user)
+    }
+
+    // Password-only authentication is intentionally disabled until a real backend flow exists.
+    // Never create a locally authenticated session without Firebase credentials.
     fun login(usernameOrPhone: String, pass: String): Boolean {
-        _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(username = usernameOrPhone, isLoggedIn = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) }
-        return true
+        _authUiState.update { it.copy(errorMessage = "Login kata sandi belum tersedia. Gunakan verifikasi nomor telepon.") }
+        return false
     }
 
     fun register(username: String, phone: String, pass: String): Boolean {
-        _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(username = username, phoneNumber = phone, isLoggedIn = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) }
-        return true
+        _authUiState.update { it.copy(errorMessage = "Pendaftaran harus melalui verifikasi nomor telepon.") }
+        return false
     }
 
     fun resendOtp(activity: Activity? = null): String {
@@ -199,13 +344,43 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun verifyOtp(code: String): Boolean {
-        val valid = code.length == 6
-        if (valid) { _authUiState.update { state -> val user = (state.user?: UserAccount()).copy(isLoggedIn = true, isPhoneVerified = true); prefs.edit().putBoolean("is_logged_in", true).apply(); state.copy(user = user, currentStep = AuthStep.AUTHENTICATED) } }
-        return valid
+        if (!code.matches(Regex("^\\d{6}$"))) {
+            _authUiState.update { it.copy(errorMessage = "Masukkan kode OTP 6 digit") }
+            return false
+        }
+        val verificationId = pendingVerificationId
+        if (verificationId.isNullOrBlank()) {
+            _authUiState.update { it.copy(errorMessage = "Permintaan OTP belum siap. Kirim ulang kode terlebih dahulu.") }
+            return false
+        }
+        _authUiState.update { it.copy(isLoading = true, errorMessage = null) }
+        FirebaseManager.signInWithOtpCode(
+            verificationId = verificationId,
+            smsCode = code,
+            onSuccess = ::onFirebaseUserAuthenticated,
+            onError = { error ->
+                _authUiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Kode OTP tidak valid atau kedaluwarsa") }
+            }
+        )
+        return true
     }
 
     fun completeProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { updateProfile(displayName, bio, avatarUrl, coverUrl); _authUiState.update { it.copy(currentStep = AuthStep.AUTHENTICATED) } }
-    fun updateProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") { _authUiState.update { state -> val updatedUser = (state.user?: UserAccount()).copy(displayName = displayName, bio = bio, avatarUrl = avatarUrl, coverUrl = coverUrl); prefs.edit().putString("user_name", displayName).putString("user_bio", bio).apply(); state.copy(user = updatedUser) } }
+    fun updateProfile(displayName: String, bio: String, avatarUrl: String = "", coverUrl: String = "") {
+        var updatedUser: UserAccount? = null
+        _authUiState.update { state ->
+            val updated = (state.user ?: UserAccount()).copy(
+                displayName = displayName.trim(),
+                bio = bio.trim(),
+                avatarUrl = avatarUrl,
+                coverUrl = coverUrl
+            )
+            updatedUser = updated
+            prefs.edit().putString("user_name", updated.displayName).putString("user_bio", updated.bio).apply()
+            state.copy(user = updated)
+        }
+        updatedUser?.let(FirebaseManager::saveUserProfile)
+    }
 
     fun addContact(name: String, phoneNumber: String, chatinId: String = ""): Contact {
         val cleanPhone = normalizePhone(phoneNumber)
@@ -215,11 +390,24 @@ class ChatinRepository(private val context: Context) {
     }
 
     fun syncDeviceContacts(deviceContacts: List<Contact>) { if (deviceContacts.isNotEmpty()) { _contacts.update { current -> val phoneSet = current.map { normalizePhone(it.phoneNumber) }.toSet(); val newOnes = deviceContacts.filterNot { phoneSet.contains(normalizePhone(it.phoneNumber)) }; current + newOnes } } }
-    fun backupChatToGoogle(accountEmail: String) { _authUiState.update { state -> val updatedUser = state.user?.copy(googleAccountEmail = accountEmail, lastGoogleBackupTime = System.currentTimeMillis()); state.copy(user = updatedUser) } }
+    fun backupChatToGoogle(accountEmail: String) {
+        _authUiState.update {
+            it.copy(errorMessage = "Cadangan Google Drive belum tersedia. Tidak ada data yang diklaim telah dicadangkan.")
+        }
+    }
     fun updatePrivacySettings(lastSeen: String, readReceipts: Boolean) { _authUiState.update { state -> val updated = state.user?.copy(privacyLastSeen = lastSeen, privacyReadReceipts = readReceipts); state.copy(user = updated) } }
     fun updateStorageSettings(autoDownloadWifi: Boolean, autoDownloadCellular: Boolean) { _authUiState.update { state -> val updated = state.user?.copy(mediaAutoDownloadWifi = autoDownloadWifi, mediaAutoDownloadCellular = autoDownloadCellular); state.copy(user = updated) } }
     fun updateAccessibilitySettings(fontSizeScale: Float, highContrast: Boolean, displayDensityScale: Float = 1.0f) { _authUiState.update { state -> val updated = state.user?.copy(fontSizeScale = fontSizeScale, highContrastMode = highContrast, displayDensityScale = displayDensityScale); state.copy(user = updated) } }
-    fun syncCloudServerData() { _authUiState.update { state -> val updated = state.user?.copy(lastCloudBackupTime = System.currentTimeMillis(), cloudSyncStatus = "Tersinkronisasi ke Server Cloud Chatin"); state.copy(user = updated) } }
+    fun syncCloudServerData() {
+        _authUiState.update {
+            it.copy(errorMessage = "Sinkronisasi cloud belum tersedia. Status data tidak akan ditandai tersinkronisasi tanpa konfirmasi server.")
+        }
+    }
     fun setCustomBackendServerUrl(url: String) { backendBaseUrl = url; prefs.edit().putString("backend_url", url).apply() }
-    fun logout() { prefs.edit().clear().apply(); loadInitialData() }
+    fun logout() {
+        pendingVerificationId = null
+        FirebaseManager.auth?.signOut()
+        prefs.edit().clear().apply()
+        loadInitialData()
+    }
 }

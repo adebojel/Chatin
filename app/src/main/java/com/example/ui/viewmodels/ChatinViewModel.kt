@@ -214,49 +214,12 @@ class ChatinViewModel(application: Application) : AndroidViewModel(application) 
         mediaType: CallMediaType,
         forceGsm: Boolean = false
     ) {
-        val net = networkState.value
-        val initialMode = if (forceGsm || !net.isVoipCapable) {
-            CallNetworkMode.GSM_OPERATOR
-        } else if (net == ActiveNetworkState.WIFI_HD) {
-            CallNetworkMode.VOIP_WIFI
-        } else {
-            CallNetworkMode.VOIP_CELLULAR
-        }
-        _activeCallState.value = ActiveCallState(
-            isActive = true,
-            contactName = contactName,
-            phoneNumber = phoneNumber,
-            mediaType = mediaType,
-            durationSeconds = 0,
-            networkMode = initialMode,
-            callOptions = VideoCallOptions(
-                networkMode = initialMode,
-                bitrateKbps = if (initialMode == CallNetworkMode.VOIP_WIFI) 3200 else 1500
-            )
-        )
-        callTimerJob?.cancel()
-        callTimerJob = viewModelScope.launch {
-            while (true) {
-                delay(1000)
-                _activeCallState.update { current ->
-                    current?.copy(durationSeconds = current.durationSeconds + 1)
-                }
-            }
-        }
+        // No WebRTC signaling/media transport or verified GSM call integration exists yet.
+        // Do not display a fabricated active call or increment a fake call timer.
+        _activeCallState.value = null
     }
 
     fun endCall() {
-        val current = _activeCallState.value
-        if (current != null) {
-            repository.addCallRecord(
-                contactName = current.contactName,
-                phoneNumber = current.phoneNumber,
-                mediaType = current.mediaType,
-                direction = CallDirection.OUTGOING,
-                networkMode = current.networkMode,
-                durationSeconds = current.durationSeconds
-            )
-        }
         callTimerJob?.cancel()
         callTimerJob = null
         _activeCallState.value = null

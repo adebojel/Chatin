@@ -27,6 +27,10 @@ data class LocalMessage(
     val pengirimId: Int,
     val penerimaId: Int,
 
+    // Identitas percakapan Firebase diperlukan untuk rekonsiliasi antrean offline.
+    val chatId: String = "",
+    val firebaseSenderUid: String = "",
+
     // Tipe pesan: text, audio, image, video, document, location, call_event
     val msgType: String = "text",
 

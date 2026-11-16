@@ -204,8 +204,13 @@ fun MainAppScaffold(
             containerColor = Color.Transparent,
             topBar = {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    shadowElevation = 2.dp
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+                        shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)
+                    )
                 ) {
                     Row(
                         modifier = Modifier
@@ -236,7 +241,7 @@ fun MainAppScaffold(
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
                                         Brush.linearGradient(
-                                            listOf(Color(0xFF00E5FF), Color(0xFF7C4DFF))
+                                            listOf(Color(0xFF45D6B8), Color(0xFF64B5F6), Color(0xFFAA91F2))
                                         )
                                     ),
                                 contentAlignment = Alignment.Center
@@ -244,7 +249,7 @@ fun MainAppScaffold(
                                 Icon(
                                     imageVector = Icons.Default.ChatBubble,
                                     contentDescription = null,
-                                    tint = Color(0xFF090D16),
+                                    tint = Color(0xFF09201D),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -286,7 +291,7 @@ fun MainAppScaffold(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .border(1.5.dp, Color(0xFF00E5FF), CircleShape)
+                                    .border(1.5.dp, Color(0xFF45D6B8), CircleShape)
                                     .clickable { showNewChatSheet = true }
                                     .testTag("top_white_chat_button")
                             ) {
@@ -294,7 +299,7 @@ fun MainAppScaffold(
                                     Icon(
                                         imageVector = Icons.Default.Chat,
                                         contentDescription = "Mencari Kontak atau Buat Chat Baru",
-                                        tint = Color(0xFF0284C7),
+                                        tint = Color(0xFF117E75),
                                         modifier = Modifier.size(19.dp)
                                     )
                                 }
@@ -354,7 +359,7 @@ fun MainAppScaffold(
             },
             bottomBar = {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
                     shadowElevation = 8.dp,
                     modifier = Modifier.navigationBarsPadding()
                 ) {

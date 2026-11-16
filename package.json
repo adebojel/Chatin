@@ -1,7 +1,7 @@
 {
-  "name": "whatsapp-secure-enterprise-chat",
+  "name": "chatin-messenger",
   "version": "1.0.0",
-  "description": "Enterprise End-to-End Encrypted Cloud Chat Application",
+  "description": "Android-first messenger foundation with Firebase identity and a prototype realtime backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

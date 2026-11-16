@@ -219,6 +219,7 @@ fun ChatDetailScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
                                 onClick = onStartVoiceCall,
+                                enabled = false,
                                 modifier = Modifier.testTag("call_voice_button")
                             ) {
                                 Icon(
@@ -229,6 +230,7 @@ fun ChatDetailScreen(
                             }
                             IconButton(
                                 onClick = onStartVideoCall,
+                                enabled = false,
                                 modifier = Modifier.testTag("call_video_button")
                             ) {
                                 Icon(
@@ -239,6 +241,7 @@ fun ChatDetailScreen(
                             }
                             IconButton(
                                 onClick = onDialGsm,
+                                enabled = false,
                                 modifier = Modifier.testTag("call_gsm_fallback_button")
                             ) {
                                 Icon(
@@ -462,7 +465,7 @@ fun ChatDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Pesan & Panggilan terenkripsi ujung-ke-ujung (E2EE Signal-style). Ketik @ai untuk berinteraksi dengan AI cerdas.",
+                                text = "Pesan saat ini belum menggunakan enkripsi end-to-end. Jangan kirim informasi sensitif melalui percakapan ini.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 15.sp,
@@ -554,79 +557,11 @@ fun ChatDetailScreen(
                     fontSize = 16.sp,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    AttachmentOption(
-                        label = "Foto",
-                        icon = Icons.Default.Image,
-                        color = Color(0xFF3B82F6),
-                        onClick = {
-                            onSendMessage(
-                                "Foto terenkripsi E2EE",
-                                MessageType.IMAGE,
-                                selectedChannel,
-                                "IMG_FOTO.jpg",
-                                "1.8 MB",
-                                null,
-                                0
-                            )
-                            showAttachSheet = false
-                        }
-                    )
-                    AttachmentOption(
-                        label = "Video",
-                        icon = Icons.Default.Videocam,
-                        color = Color(0xFFEC4899),
-                        onClick = {
-                            onSendMessage(
-                                "Video rekaman",
-                                MessageType.VIDEO,
-                                selectedChannel,
-                                "VID_REKAMAN.mp4",
-                                "8.5 MB",
-                                null,
-                                32
-                            )
-                            showAttachSheet = false
-                        }
-                    )
-                    AttachmentOption(
-                        label = "Dokumen",
-                        icon = Icons.Default.Description,
-                        color = Color(0xFF8B5CF6),
-                        onClick = {
-                            onSendMessage(
-                                "Dokumen Spesifikasi",
-                                MessageType.DOCUMENT,
-                                selectedChannel,
-                                "Dokumen_Chatin.pdf",
-                                "3.1 MB",
-                                null,
-                                0
-                            )
-                            showAttachSheet = false
-                        }
-                    )
-                    AttachmentOption(
-                        label = "Lokasi",
-                        icon = Icons.Default.LocationOn,
-                        color = Color(0xFF10B981),
-                        onClick = {
-                            onSendMessage(
-                                "Lokasi Terkini Pengguna",
-                                MessageType.LOCATION,
-                                selectedChannel,
-                                null,
-                                null,
-                                null,
-                                0
-                            )
-                            showAttachSheet = false
-                        }
-                    )
-                }
+                Text(
+                    text = "Pengiriman foto, video, dokumen, dan lokasi belum terhubung ke layanan upload/pemilihan berkas. Tidak ada lampiran contoh yang akan dikirim.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
@@ -707,9 +642,9 @@ fun MessageBubbleItem(
                         )
                     }
                     val (tagText, tagColor) = when (message.deliveryChannel) {
-                        DeliveryChannel.DATA_NETWORK -> "Data E2EE" to Color(0xFF00E5FF)
+                        DeliveryChannel.DATA_NETWORK -> "Data" to Color(0xFF00E5FF)
                         DeliveryChannel.RCS_ADVANCED -> "RCS" to Color(0xFF8B5CF6)
-                        DeliveryChannel.SMS_FALLBACK -> "SMS Bebas Kuota" to Color(0xFFF59E0B)
+                        DeliveryChannel.SMS_FALLBACK -> "SMS Operator" to Color(0xFFF59E0B)
                     }
                     Text(
                         text = tagText,
@@ -1033,8 +968,8 @@ fun AttachmentOption(
 }
 
 /**
- * Merender baris gelembung pesan terenkripsi langsung dari entitas Room DB lokal.
- * Dilengkapi pratinjau foto buram (Blurred Thumbnail 16x16) dan indikator status antrian E2EE.
+ * Merender pesan lokal dari entitas Room DB.
+ * Status antrean lokal tidak berarti pesan telah terkirim atau terenkripsi.
  */
 @Composable
 fun LocalMessageBubbleRow(

@@ -1,7 +1,8 @@
 package com.example.data.models
 
 data class UserAccount(
-    val id: Int = 1,
+    val id: Int = 0,
+    val firebaseUid: String = "",
     val username: String = "",
     val phoneNumber: String = "",
     val displayName: String = "",
@@ -12,9 +13,9 @@ data class UserAccount(
     val isPhoneVerified: Boolean = false,
     val isLoggedIn: Boolean = false,
     val isBiometricEnabled: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val cloudSyncStatus: String = "Tersinkronisasi ke Server Cloud Chatin",
-    val lastCloudBackupTime: Long = System.currentTimeMillis(),
+    val createdAt: Long = 0L,
+    val cloudSyncStatus: String = "Belum tersinkronisasi",
+    val lastCloudBackupTime: Long = 0L,
     val googleAccountEmail: String = "",
     val lastGoogleBackupTime: Long = 0L,
     val privacyLastSeen: String = "Semua Orang",

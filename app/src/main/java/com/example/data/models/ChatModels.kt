@@ -14,7 +14,7 @@ enum class MessageType {
 }
 
 /**
- * Status pesan untuk Read Receipt (Sesuai protokol WhatsApp/Signal)
+ * Status acknowledgement pesan. DELIVERED/READ hanya boleh dipakai jika ada receipt server/perangkat yang terverifikasi.
  */
 enum class MessageStatus {
     PENDING,     // Ikon jam pasir (dalam antrian offline lokal)
@@ -24,12 +24,12 @@ enum class MessageStatus {
 }
 
 /**
- * Saluran pengiriman pesan multi-jaringan
+ * Model label saluran pesan. RCS dan SMS fallback belum diimplementasikan oleh transport Chatin.
  */
 enum class DeliveryChannel {
     DATA_NETWORK, // Internet standar (Wi-Fi HD / Data Seluler 5G)
-    RCS_ADVANCED, // Rich Communication Services carrier
-    SMS_FALLBACK; // SMS operator GSM (Bebas kuota internet 0%)
+    RCS_ADVANCED, // Belum tersedia: belum ada integrasi RCS carrier
+    SMS_FALLBACK; // Belum tersedia: belum ada integrasi SMS operator
 
     companion object {
         val GSM_SMS = SMS_FALLBACK
@@ -47,16 +47,16 @@ data class Contact(
     val chatinId: String,
     val avatarUrl: String = "",
     val avatarColorHex: Long = 0xFF00E5FF,
-    val statusMessage: String = "Menggunakan Chatin untuk komunikasi terenkripsi",
-    val isOnline: Boolean = true,
-    val lastSeenText: String = "Online",
+    val statusMessage: String = "",
+    val isOnline: Boolean = false,
+    val lastSeenText: String = "Status tidak diketahui",
     val isFavorite: Boolean = false,
-    val hasRcs: Boolean = true,
-    val allowsVoip: Boolean = true
+    val hasRcs: Boolean = false,
+    val allowsVoip: Boolean = false
 )
 
 /**
- * Model Pesan E2EE dalam Memori Klien
+ * Model pesan dalam memori klien. Field model ini tidak menyatakan payload terenkripsi end-to-end.
  */
 data class Message(
     val id: String,
@@ -66,7 +66,7 @@ data class Message(
     val text: String,
     val timestamp: Long = System.currentTimeMillis(),
     val type: MessageType = MessageType.TEXT,
-    val status: MessageStatus = MessageStatus.READ,
+    val status: MessageStatus = MessageStatus.PENDING,
     val deliveryChannel: DeliveryChannel = DeliveryChannel.DATA_NETWORK,
     val isFromMe: Boolean = false,
     val mediaUrl: String? = null,

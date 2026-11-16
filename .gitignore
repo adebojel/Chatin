@@ -35,3 +35,6 @@ firebase-adminsdk-*.json
 # IDE / OS
 .DS_Store
 Thumbs.db
+
+# Android Secrets Gradle Plugin local secrets
+secrets.properties

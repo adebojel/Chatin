@@ -1,7 +1,7 @@
 /**
  * =====================================================================
- * CHATIN ENTERPRISE BACKEND SERVER (server.js)
- * Clean Architecture, High-Security E2EE, HTTPS & Socket.io Engine
+ * CHATIN BACKEND PROTOTYPE (server.js)
+ * Express API and Socket.IO foundation — NOT production-ready or E2EE
  * =====================================================================
  */
 
@@ -17,6 +17,12 @@ const { Server } = require('socket.io');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 require('dotenv').config();
+
+// Fail closed: this backend has not passed authentication, authorization,
+// WebAuthn, media privacy, and E2EE production reviews. Never expose it in production.
+if (process.env.NODE_ENV === 'production') {
+    throw new Error('Chatin backend prototype is blocked in production until the security audit blockers are resolved.');
+}
 
 // =====================================================================
 // 1. ANTI-CRASH GLOBAL ENGINE

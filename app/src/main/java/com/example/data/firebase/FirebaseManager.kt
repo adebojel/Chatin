@@ -100,7 +100,7 @@ object FirebaseManager {
                 verificationId: String,
                 token: PhoneAuthProvider.ForceResendingToken
             ) {
-                Log.d(TAG, "SMS OTP verification code sent to $phoneNumber.")
+                Log.d(TAG, "SMS OTP verification code sent.")
                 onCodeSent(verificationId)
             }
         }
@@ -176,7 +176,7 @@ object FirebaseManager {
                                     MessageType.TEXT
                                 },
                                 status = try {
-                                    MessageStatus.valueOf(doc.getString("status") ?: MessageStatus.READ.name)
+                                    MessageStatus.valueOf(doc.getString("status") ?: MessageStatus.PENDING.name)
                                 } catch (e: Exception) {
                                     MessageStatus.READ
                                 },
@@ -185,7 +185,7 @@ object FirebaseManager {
                                 } catch (e: Exception) {
                                     DeliveryChannel.DATA_NETWORK
                                 },
-                                isFromMe = doc.getBoolean("isFromMe") ?: false,
+                                isFromMe = doc.getString("senderId") == auth?.currentUser?.uid,
                                 fileName = doc.getString("fileName"),
                                 fileSizeText = doc.getString("fileSizeText"),
                                 mediaUrl = doc.getString("mediaUrl"),
@@ -215,7 +215,10 @@ object FirebaseManager {
         onSuccess: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
-        val db = firestore ?: return
+        val db = firestore ?: run {
+            onError(IllegalStateException("Firestore tidak tersedia; pesan tetap berada di antrean lokal"))
+            return
+        }
         val chatRef = db.collection("chats").document(chatId)
         val msgRef = chatRef.collection("messages").document(message.id)
 
@@ -227,7 +230,7 @@ object FirebaseManager {
             "text" to message.text,
             "timestamp" to message.timestamp,
             "isFromMe" to message.isFromMe,
-            "status" to message.status.name,
+            "status" to MessageStatus.SENT.name,
             "type" to message.type.name,
             "channel" to message.deliveryChannel.name,
             "fileName" to message.fileName,
@@ -263,8 +266,13 @@ object FirebaseManager {
      */
     fun updateUserPresence(userId: String, isOnline: Boolean) {
         val db = firestore ?: return
-        if (userId.isBlank()) return
-        val userRef = db.collection("users").document(userId)
+        val currentUser = auth?.currentUser ?: return
+        // Never let a caller write presence for another user's document.
+        if (userId.isBlank() || userId != currentUser.uid) {
+            Log.w(TAG, "Presence update rejected: user ID does not match Firebase session.")
+            return
+        }
+        val userRef = db.collection("users").document(currentUser.uid)
         val updates = hashMapOf<String, Any>(
             "isOnline" to isOnline,
             "lastSeenTimestamp" to System.currentTimeMillis()
@@ -275,21 +283,37 @@ object FirebaseManager {
     }
 
     /**
-     * Menyimpan profil pengguna resmi ke Firestore.
+     * Save the signed-in user's profile under the immutable Firebase Auth UID.
+     * Phone numbers remain profile data, never Firestore document identifiers.
      */
     fun saveUserProfile(user: UserAccount) {
         val db = firestore ?: return
-        val userRef = db.collection("users").document(user.phoneNumber)
+        val currentUser = auth?.currentUser ?: run {
+            Log.w(TAG, "Profile write rejected: no authenticated Firebase user.")
+            return
+        }
+        val verifiedPhone = currentUser.phoneNumber
+        if (user.firebaseUid.isNotBlank() && user.firebaseUid != currentUser.uid) {
+            Log.w(TAG, "Profile write rejected: profile UID does not match the Firebase session.")
+            return
+        }
+        if (verifiedPhone.isNullOrBlank() || verifiedPhone != user.phoneNumber) {
+            Log.w(TAG, "Profile write rejected: profile phone does not match the verified Firebase account.")
+            return
+        }
+        val userRef = db.collection("users").document(currentUser.uid)
         val data = hashMapOf(
-            "id" to user.id,
+            "uid" to currentUser.uid,
             "username" to user.username,
-            "phoneNumber" to user.phoneNumber,
+            "phoneNumber" to verifiedPhone,
             "displayName" to user.displayName,
             "bio" to user.bio,
             "avatarUrl" to user.avatarUrl,
             "isOnline" to true,
-            "lastUpdated" to System.currentTimeMillis()
+            "lastUpdated" to FieldValue.serverTimestamp()
         )
-        userRef.set(data, SetOptions.merge())
+        userRef.set(data, SetOptions.merge()).addOnFailureListener {
+            Log.w(TAG, "Profile save failed: ${it.message}")
+        }
     }
 }

@@ -1,32 +1,110 @@
-name: Build APK Chatin
-on: [push]
+name: Build and publish signed Chatin APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Git tag for the GitHub Release (example: v1.0.0-beta.1)"
+        required: true
+        type: string
+      release_name:
+        description: "Release title"
+        required: true
+        default: "Chatin Beta"
+        type: string
+      prerelease:
+        description: "Mark this release as a pre-release"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build-release:
+    if: github.ref == 'refs/heads/main'
+    name: Build, verify and publish signed APK (main only)
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-      - name: Setup Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/chatin-release.jks
-      - name: Get SHA for Firebase
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: latest
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+          accept-android-sdk-licenses: true
+
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Validate release configuration
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required repository secret $name is not configured."
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/chatin-release.jks
+          test -s app/chatin-release.jks
+          keytool -list -keystore app/chatin-release.jks -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" >/dev/null
+
+      - name: Run Android unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+
+      - name: Build signed release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: keytool -list -v -keystore app/chatin-release.jks -alias $KEY_ALIAS -storepass $KEYSTORE_PASSWORD -keypass $KEY_PASSWORD | grep -E "SHA1|SHA256"
-      - name: Build Release - Update Timpa
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle assembleRelease
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+        run: gradle --no-daemon :app:assembleRelease
+
+      - name: Verify APK signature and calculate SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee apk-signature-report.txt
+          sha256sum "$APK" | tee apk-sha256.txt
+
+      - name: Publish GitHub Release with APK assets
+        uses: softprops/action-gh-release@v2
         with:
-          name: Chatin-Release-Update-Timpa
-          path: app/build/outputs/apk/release/app-release.apk
+          tag_name: ${{ inputs.tag_name }}
+          name: ${{ inputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            apk-sha256.txt
+            apk-signature-report.txt
+
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f app/chatin-release.jks
