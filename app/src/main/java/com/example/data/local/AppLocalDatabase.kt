@@ -9,8 +9,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Database Master Room untuk Chatin Enterprise Replicator.
- * Mengimplementasikan Singleton Pattern thread-safe dengan fallbackToDestructiveMigration()
- * untuk mencegah crash database akibat skema migrasi.
+ * Menggunakan migrasi eksplisit agar riwayat pesan lokal tidak terhapus diam-diam
+ * ketika skema database berubah.
  */
 @Database(
     entities = [LocalMessage::class],
@@ -40,7 +40,6 @@ abstract class AppLocalDatabase : RoomDatabase() {
                     "chatin_enterprise_local.db"
                 )
                     .addMigrations(MIGRATION_1_2)
-                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
