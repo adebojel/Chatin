@@ -1,372 +1,278 @@
-# Chatin — Android Messenger, Web Client & Realtime Backend
+<!--
+  CHATIN • README EXPERIENCE
+  Transparent 3D vector artwork lives in docs/images/.
+  Product screenshots will only be added after real-device verification.
+-->
 
-Chatin adalah aplikasi pesan Android dengan fondasi web client dan backend realtime.
+<div align="center">
 
-<p align="center">
-  <strong>Chatin • Android-first Messenger</strong><br/>
-  <em>Clean interface · Firebase identity · Realtime foundation</em>
+<img src="docs/images/chatin-hero-3d.svg" alt="Chatin — futuristic transparent 3D messenger artwork" width="100%" />
+
+# CHATIN
+### Messenger • Realtime Foundation • Android-first
+
+**Satu ruang komunikasi modern. Cepat, rapi, dan dibangun dengan mengutamakan keandalan serta privasi.**
+
+<p>
+  <a href="https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml"><img src="https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml/badge.svg?branch=feat/chatin-core-reliability" alt="Android CI"></a>
+  <img src="https://img.shields.io/badge/Android-Kotlin%20%7C%20Compose-3DDC84?logo=android&logoColor=white" alt="Android Kotlin Compose">
+  <img src="https://img.shields.io/badge/Backend-Prototype-orange" alt="Backend prototype">
+  <img src="https://img.shields.io/badge/Release-v1.0.0-64748b" alt="Release v1.0.0">
+  <img src="https://img.shields.io/badge/Status-Beta%20Development-orange" alt="Beta development">
 </p>
 
-<p align="center">
-  <a href="https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml"><img alt="Android Debug CI" src="https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/adebojel/Chatin/pull/3"><img alt="Development PR" src="https://img.shields.io/badge/development-PR%20%233-blue"></a>
-  <img alt="Status" src="https://img.shields.io/badge/status-beta%20development-orange">
-</p>
+[**Unduh Release**](https://github.com/adebojel/Chatin/releases/tag/v1.0.0) ·
+[Build Android](https://github.com/adebojel/Chatin/actions) ·
+[Roadmap](docs/PRODUCT_ROADMAP.md) ·
+[Keamanan](docs/BACKEND_SECURITY_AUDIT.md) ·
+[Laporkan masalah](https://github.com/adebojel/Chatin/issues)
 
-> **Tampilan dan screenshot:** repository saat ini belum menyimpan screenshot aplikasi yang diambil dari emulator/perangkat pada build tervalidasi. Gambar launcher bukan screenshot UI, sehingga tidak dipakai sebagai bukti tampilan. Screenshot layar masuk, inbox, percakapan, profil, serta tampilan tablet akan ditambahkan setelah pengambilan nyata dan pemeriksaan privasi. Jangan menganggap ilustrasi atau mockup sebagai tampilan aplikasi yang sudah berjalan.
+</div>
 
-## Gambaran arsitektur
+> [!IMPORTANT]
+> **Status proyek: BETA DEVELOPMENT — BELUM SIAP PRODUKSI.** Release GitHub `v1.0.0` sudah dibuat, tetapi ketika dokumentasi ini diperbarui belum memiliki APK pada Assets. APK Debug CI tersedia sebagai artifact sementara; APK Debug bukan APK Release bertanda tangan. Autentikasi Firebase memerlukan konfigurasi project dan uji perangkat. Chat cloud, sinkronisasi offline, push notification, panggilan, media privat, serta E2EE belum dinyatakan siap produksi. Jangan gunakan untuk percakapan rahasia atau data pengguna nyata.
 
-```mermaid
-flowchart TB
-  A[Android App<br/>Kotlin + Jetpack Compose] --> B[Firebase Authentication<br/>Phone OTP]
-  A --> C[Cloud Firestore<br/>Realtime chat foundation]
-  A --> D[Room<br/>Local message queue]
-  E[Web Client<br/>public/] --> F[Node.js API<br/>Express + Socket.IO]
-  F --> G[(PostgreSQL)]
-  F --> H[Private media storage<br/>planned / not production]
-  C -. membership rules and trusted chat creation required .-> I[Security boundary]
-  D -. server acknowledgement and retry still required .-> C
+---
+
+## ✦ Jelajahi Chatin
+
+| Bagian | Tujuan |
+|---|---|
+| [Unduhan & instalasi](#-unduhan-apk-android) | Status APK Debug dan Release |
+| [Fitur & status](#-fitur-dan-status-implementasi) | Apa yang sudah ada dan yang belum |
+| [Arsitektur](#-arsitektur-sistem) | Komponen Android, Firebase, Room, dan backend |
+| [Setup Firebase](#-konfigurasi-firebase) | Menyiapkan autentikasi dan Firestore |
+| [Build & pengujian](#-build-dan-pengujian) | Jalur CI melalui GitHub Actions |
+| [Roadmap](#-roadmap-pengembangan) | Urutan pekerjaan menuju rilis publik |
+| [Keamanan](#-keamanan-dan-privasi) | Batasan yang wajib dipahami |
+
+## ✧ Visi produk
+
+Chatin dikembangkan sebagai aplikasi messenger Android-first dengan pengalaman yang bersih dan responsif. Fokus engineering saat ini adalah fondasi identitas Firebase, penyimpanan lokal Room, alur pesan yang jujur terhadap status pengiriman, dan pipeline build otomatis.
+
+### Prinsip utama
+
+- **Identity first** — Firebase Auth UID menjadi identitas akun kanonis.
+- **Offline-aware** — pesan lokal yang belum mendapat acknowledgement tetap berstatus PENDING.
+- **Secure by default** — aturan Firestore menolak akses chat sampai model keanggotaan dan layanan tepercaya siap.
+- **Honest status** — fitur yang belum selesai tidak ditampilkan sebagai fitur produksi.
+- **Mobile-first** — Android native dengan Kotlin dan Jetpack Compose.
+
+## ✧ Arsitektur sistem
+
+<div align="center">
+  <img src="docs/images/chatin-architecture-3d.svg" alt="Diagram arsitektur Chatin dalam ilustrasi isometrik 3D transparan" width="100%" />
+  <sub>Ilustrasi arsitektur konseptual. Komponen berstatus prototype atau planned belum menjadi layanan produksi.</sub>
+</div>
+
+### Komponen teknologi
+
+| Lapisan | Teknologi | Status |
+|---|---|---|
+| Android app | Kotlin, Jetpack Compose | Fondasi aplikasi tersedia |
+| Identity | Firebase Authentication / Phone OTP | Integrasi SDK tersedia; perlu konfigurasi dan uji perangkat |
+| Realtime data | Cloud Firestore | Integrasi dasar; rules dan membership belum siap |
+| Local persistence | Room, Coroutines, Flow | Antrean lokal PENDING tersedia; worker retry belum selesai |
+| Web client | HTML, CSS, JavaScript | Ada di `public/`; perlu validasi integrasi |
+| Backend prototype | Node.js, Express, Socket.IO | Dikunci dari mode production sampai audit ditutup |
+| Database backend | PostgreSQL | Skema tersedia; deployment produksi belum disetujui |
+| Media | S3-compatible storage | Belum siap untuk data privat/produksi |
+
+## ✧ Fitur dan status implementasi
+
+| Area | Status | Keterangan |
+|---|---|---|
+| Aplikasi Android | <img src="https://img.shields.io/badge/FOUNDATION-available-16a34a" alt="Foundation available"> | Kotlin + Compose |
+| Nomor telepon & OTP | <img src="https://img.shields.io/badge/INTEGRATION-in%20progress-blue" alt="Integration in progress"> | Firebase Phone Auth; perlu konfigurasi project, SHA fingerprint, kuota SMS, dan uji perangkat |
+| Validasi E.164 | <img src="https://img.shields.io/badge/TESTED-unit%20tests-16a34a" alt="Unit tests"> | Format nomor internasional |
+| Sesi & logout Firebase | <img src="https://img.shields.io/badge/IMPLEMENTED-foundation-16a34a" alt="Implemented foundation"> | Sumber sesi adalah Firebase currentUser |
+| Profil Firebase UID | <img src="https://img.shields.io/badge/IN%20PROGRESS-review-blue" alt="In progress"> | UID dan nomor terverifikasi diperiksa pada jalur penulisan profil |
+| Pesan Firestore | <img src="https://img.shields.io/badge/BLOCKED-security%20gate-red" alt="Blocked security gate"> | Rules chat sengaja deny-by-default sampai trusted membership/message service tersedia |
+| Antrean lokal | <img src="https://img.shields.io/badge/FOUNDATION-available-16a34a" alt="Foundation available"> | Room menyimpan pesan PENDING |
+| Sinkronisasi offline otomatis | <img src="https://img.shields.io/badge/PLANNED-not%20complete-orange" alt="Planned"> | Worker retry, backoff, dan idempotency belum selesai |
+| Push notification FCM | <img src="https://img.shields.io/badge/PLANNED-not%20verified-orange" alt="Planned"> | Belum dikonfirmasi aktif |
+| Voice/video call | <img src="https://img.shields.io/badge/PLANNED-not%20complete-orange" alt="Planned"> | WebRTC/signaling belum selesai |
+| Media privat | <img src="https://img.shields.io/badge/PLANNED-security%20work-orange" alt="Planned"> | Validasi file dan akses privat belum lengkap |
+| E2EE | <img src="https://img.shields.io/badge/NOT%20AVAILABLE-no%20claim-red" alt="Not available"> | Belum ada implementasi protokol E2EE terverifikasi |
+| Backend produksi | <img src="https://img.shields.io/badge/LOCKED-security%20audit-red" alt="Locked"> | Jangan deploy ke internet atau gunakan data nyata |
+
+## ✧ Unduhan APK Android
+
+### Build Debug untuk pengujian internal
+
+<details open>
+<summary><strong>Build terbaru yang terverifikasi</strong></summary>
+
+- Workflow: [Android Debug APK — run #43821972922](https://github.com/adebojel/Chatin/actions/runs/43821972922)
+- Commit: `81771e99692b63fc1314cf5274563722cb5d8c5f`
+- Status: **success**
+- Pemeriksaan: unit tests, kompilasi konfigurasi Release, assemble Debug, inspeksi sertifikat APK, dan upload artifact.
+- Artifact: `chatin-debug-apk` (sekitar 29,8 MB)
+- Masa simpan artifact pada saat build: sampai **23 November 2026**.
+
+**Cara mengunduh:**
+1. Buka [halaman build #43821972922](https://github.com/adebojel/Chatin/actions/runs/43821972922).
+2. Pastikan run berstatus **Success**.
+3. Gulir ke bagian **Artifacts**.
+4. Pilih `chatin-debug-apk`, unduh ZIP, lalu ekstrak.
+5. Cari `app-debug.apk` di dalam ZIP.
+
+> Artifact Actions bersifat sementara dan kedaluwarsa sesuai retention. Jika tautan sudah kedaluwarsa, buka [workflow Android Debug](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml) dan gunakan build terbaru yang sukses.
+
+</details>
+
+### Release APK bertanda tangan
+
+<div align="center">
+
+[![GitHub release](https://img.shields.io/badge/GitHub%20Release-v1.0.0-64748b?logo=github)](https://github.com/adebojel/Chatin/releases/tag/v1.0.0)
+
+**[Buka Release Chatin v1.0.0](https://github.com/adebojel/Chatin/releases/tag/v1.0.0)**
+
+</div>
+
+Release `v1.0.0` telah tersedia, tetapi **APK belum terunggah ke Assets** pada pemeriksaan terakhir. Saat ini halaman tersebut menampilkan arsip source code. Tautan di atas akan menjadi tempat unduhan APK setelah pipeline Release berhasil.
+
+Workflow rilis: [Build and publish signed Chatin APK](https://github.com/adebojel/Chatin/actions/workflows/build-apk.yml).
+
+Workflow Release membutuhkan GitHub repository secrets berikut:
+
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
+
+Pemilik repository mengatur secret melalui **Settings → Secrets and variables → Actions**. Jangan pernah memasukkan nilai secret ke README, commit, issue, atau chat. Workflow Release dijalankan dari branch `main`, memeriksa unit test, membangun APK Release, memverifikasi signature, menghitung SHA-256, lalu mengunggah APK dan laporan verifikasi ke Release tag yang dipilih.
+
+## ✧ Build dan pengujian
+
+### CI melalui GitHub Actions
+
+- [Android Debug APK workflow](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)
+- [Signed Release workflow](https://github.com/adebojel/Chatin/actions/workflows/build-apk.yml)
+- [Semua workflow runs](https://github.com/adebojel/Chatin/actions)
+
+### Build lokal Android
+
+Persyaratan: JDK 17, Android SDK platform/build tools API 36, dan konfigurasi Firebase yang sesuai.
+
+```bash
+git clone https://github.com/adebojel/Chatin.git
+cd Chatin
+git checkout feat/chatin-core-reliability
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug
 ```
 
-Diagram menunjukkan komponen yang ada dan batas integrasi yang masih harus diselesaikan; bukan bukti bahwa semua jalur produksi sudah aktif.
+APK Debug lokal dihasilkan pada:
 
-
-**Status: BETA DEVELOPMENT — BELUM SIAP PRODUKSI.** Autentikasi OTP Firebase dan sebagian alur pesan telah diperkuat, tetapi pengujian perangkat nyata, sinkronisasi offline, aturan keamanan Firestore, panggilan WebRTC, notifikasi push, dan enkripsi end-to-end penuh belum selesai. Jangan gunakan untuk percakapan rahasia atau data produksi.
-
-## Peringatan backend dan keamanan
-
-Folder backend saat ini masih prototipe dan **tidak boleh dideploy ke produksi**. Startup `server.js` kini menolak `NODE_ENV=production` sampai audit keamanan ditutup. WebAuthn, otorisasi Socket.IO, pengelolaan pre-key, privasi upload media, penyatuan identitas Firebase/backend, dan E2EE belum memenuhi syarat produksi.
-
-Baca [Audit Keamanan Backend](docs/BACKEND_SECURITY_AUDIT.md) sebelum menjalankan server. Jangan gunakan backend ini untuk data pengguna nyata.
-
-## Pembaruan terbaru
-
-| Informasi | Nilai |
-| --- | --- |
-| Versi Android | 1.0 (versionCode 1, sesuai konfigurasi Gradle saat ini) |
-| Package ID | com.aistudio.chatin.kxqrvz |
-| Minimum Android | Android 7.0 / API 24 |
-| Target SDK | API 36 |
-| Waktu pembaruan README | **16 November 2026** |
-| Branch pengembangan | feat/chatin-core-reliability |
-| Commit branch terbaru saat dokumentasi diperbarui | 187252673b797452601f808b505a2e88a88215c9 |
-| Pull request | [PR #3 — Firebase phone verification & message reliability](https://github.com/adebojel/Chatin/pull/3) |
-
-### Perubahan kode terbaru di branch pengembangan
-
-- Login nomor telepon memakai Firebase Phone Authentication dan verifikasi OTP sungguhan; enam digit sembarang tidak lagi dianggap valid.
-- Nomor telepon divalidasi dalam format internasional E.164 (contoh Indonesia: +6281234567890).
-- Sesi Firebase menjadi sumber autentikasi; status login lokal saja tidak cukup.
-- Logout mengakhiri sesi Firebase.
-- Profil disimpan setelah autentikasi berhasil.
-- Pesan memakai Firebase UID sebagai identitas pengirim.
-- Pesan baru berstatus PENDING sampai Firestore mengonfirmasi penulisan.
-- Ditambahkan unit test validator nomor telepon dan langkah unit test pada workflow Android.
-
-**Catatan:** PR #3 masih draft dan belum digabung ke main. Perubahan tersebut ada pada branch PR, bukan berarti sudah tersedia pada versi rilis publik.
-
-## Unduh dan instal aplikasi Android
-
-### Build uji coba (APK Debug)
-
-**[Unduh APK Debug terbaru — build, unit test, dan kompilasi Release berhasil (commit d0e3a47)](https://github.com/adebojel/Chatin/actions/runs/43805434473)** — artifact `chatin-debug-apk` tersedia pada bagian Artifacts sampai 23 November 2026.  
-
-[Semua workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
-**[Lihat detail build terbaru](https://github.com/adebojel/Chatin/actions/runs/43805434473)**
-
-Cara mengambil APK setelah workflow selesai:
-
-1. Buka tautan GitHub Actions di atas.
-2. Pastikan status workflow completed dan hasilnya success.
-3. Gulir ke bagian Artifacts pada halaman run.
-4. Unduh artifact bernama chatin-debug-apk.
-5. Ekstrak ZIP, lalu cari app-debug.apk.
-6. Pindahkan APK ke ponsel Android dan buka file tersebut.
-7. Jika Android meminta izin, izinkan instalasi dari sumber yang digunakan untuk membuka APK. Matikan kembali izin tersebut bila tidak diperlukan.
-8. Jalankan Chatin dan ikuti checklist uji coba di bawah.
-
-**Penting:**
-- Tautan di atas adalah halaman workflow, bukan tautan APK langsung. APK baru dapat diunduh setelah build sukses dan artifact terunggah.
-- Artifact debug CI disimpan selama 7 hari. Jika kedaluwarsa, jalankan ulang workflow dari tab Actions atau minta build baru.
-- Build Debug ditujukan untuk pengujian, bukan distribusi publik.
-- Belum ada tautan Google Play Store atau rilis stabil.
-- Hanya instal APK dari repository resmi Chatin.
-
-#
-## GitHub Releases — APK bertanda tangan
-
-**[Buka halaman unduhan Chatin — GitHub Releases](https://github.com/adebojel/Chatin/releases/latest)**. Tautan ini akan menampilkan APK pada bagian **Assets** setelah rilis pertama berhasil diterbitkan. Saat ini belum ada rilis yang dipublikasikan.
-
-Workflow rilis resmi tersedia di [Build and publish signed Chatin APK](https://github.com/adebojel/Chatin/actions/workflows/build-apk.yml). Workflow ini dijalankan manual dan memerlukan konfigurasi repository secrets berikut oleh pemilik repository: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, dan `KEY_PASSWORD`. Jangan pernah memasukkan nilai secret ke README, commit, issue, atau chat.
-
-Setelah secret tersedia, pemilik repository dapat menjalankan workflow dengan tag rilis unik (contoh beta), memeriksa unit test release, signature APK, SHA-256, lalu workflow akan mengunggah APK dan laporan signature ke GitHub Releases. **Saat ini belum ada GitHub Release APK yang dapat diunduh**; jangan menganggap artifact debug CI sebagai APK rilis bertanda tangan.
-
-## Membuat APK sendiri melalui Android Studio
-
-1. Pasang Android Studio dan Android SDK yang mendukung API 36.
-2. Clone repository:
-   ```bash
-   git clone https://github.com/adebojel/Chatin.git
-   cd Chatin
-   ```
-3. Checkout branch pengembangan bila ingin menguji perubahan terbaru:
-   ```bash
-   git checkout feat/chatin-core-reliability
-   ```
-4. Siapkan konfigurasi Firebase.
-5. Buka folder proyek di Android Studio dan tunggu Gradle Sync.
-6. Jalankan:
-   ```bash
-   ./gradlew :app:testDebugUnitTest
-   ./gradlew :app:assembleDebug
-   ```
-7. APK dihasilkan di app/build/outputs/apk/debug/app-debug.apk.
-
-Di Windows gunakan gradlew.bat sebagai pengganti ./gradlew.
-
-
-## Tampilan aplikasi dan materi visual
-
-> **Catatan transparansi:** repository saat ini berisi ikon launcher, tetapi belum berisi screenshot layar aplikasi yang diambil dari perangkat/emulator pada build tervalidasi. Ikon launcher bukan screenshot UI. Screenshot Inbox, percakapan, profil, panggilan, dan pengaturan akan ditambahkan setelah pengujian UI pada perangkat nyata agar README tidak menampilkan mockup atau gambar aplikasi lain seolah-olah Chatin.
-
-### Arsitektur sistem (ringkasan)
-
-```mermaid
-flowchart TD
-  A[Android App · Kotlin + Compose] --> B[Firebase Authentication]
-  A --> C[Cloud Firestore · current message path]
-  A --> D[Room · local pending queue]
-  A --> E[Backend API · prototype only]
-  E --> F[PostgreSQL]
-  E --> G[Socket.IO]
-  E --> H[Private media storage · not production-ready]
-  I[Future trusted Cloud Functions / API] -. authorization + membership required .-> C
-  I -. future FCM sender .-> A
+```text
+app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Garis putus-putus menunjukkan komponen target yang belum selesai. Backend prototipe tidak boleh dipakai untuk data produksi.
+### Backend prototype
 
-### Dokumentasi engineering
+Backend bukan layanan produksi. Untuk pemeriksaan sintaks saja:
 
-- [Audit keamanan backend](docs/BACKEND_SECURITY_AUDIT.md)
-- [Audit integrasi dan riset repository open-source](docs/OPEN_SOURCE_AUDIT.md)
-- [Roadmap produk dan definisi selesai](docs/PRODUCT_ROADMAP.md)
-- [Panduan konfigurasi Firebase](docs/FIREBASE_SETUP.md)
+```bash
+npm install
+node --check server.js
+```
 
-## Fitur dan status implementasi
+Jangan menjalankan server pada internet publik atau memasukkan data pengguna nyata. Lihat [audit keamanan backend](docs/BACKEND_SECURITY_AUDIT.md).
 
-| Area | Status saat ini | Catatan |
-| --- | --- | --- |
-| Android native | Fondasi tersedia | Kotlin, Jetpack Compose |
-| Nomor telepon + OTP | Integrasi Firebase di PR #3 | Perlu konfigurasi project dan uji perangkat nyata |
-| Validasi E.164 | Ditambahkan | Unit test tersedia |
-| Sesi dan logout Firebase | Diperkuat di PR #3 | Perlu uji siklus hidup aplikasi |
-| Profil pengguna | Integrasi Firestore tersedia | Skema ID pengguna masih perlu migrasi |
-| Chat dan pesan Firestore | Implementasi dasar tersedia | Rules dan keanggotaan chat belum siap produksi |
-| Status pending pesan | Diperbaiki di PR #3 | Tidak mengklaim terkirim sebelum acknowledgement |
-| Cache lokal/offline | Fondasi lokal tersedia | Worker upload dan rekonsiliasi outbox belum selesai |
-| Web client | Ada di folder public/ | Perlu pengujian integrasi |
-| Backend realtime | Express + Socket.IO | Perlu konfigurasi deployment dan pengujian |
-| PostgreSQL | Skema tersedia | Perlu konfigurasi dan migrasi server |
-| Upload media | Belum siap | Provider dan akses privat perlu diselesaikan |
-| Push notification FCM | Belum dikonfirmasi selesai | Jangan diasumsikan aktif |
-| Voice/video call WebRTC | Belum selesai | UI/fondasi bukan panggilan produksi |
-| Enkripsi end-to-end (E2EE) | Belum tersedia menyeluruh | Pesan saat ini dapat disimpan sebagai teks biasa |
-| Keamanan Firestore produksi | Belum selesai | Perlu UID membership, rules ketat, dan emulator tests |
+## ✧ Konfigurasi Firebase
 
-## Riset dan audit integrasi open-source
-
-Daftar repository, snapshot lisensi, evaluasi kompatibilitas, dan keputusan integrasi dicatat di [docs/OPEN_SOURCE_AUDIT.md](docs/OPEN_SOURCE_AUDIT.md). Kandidat utama yang ditelaah:
-
-- [LiveKit Android SDK](https://github.com/livekit/client-sdk-android) — kandidat POC audio/video realtime; belum diintegrasikan.
-- [GetStream WebRTC Android](https://github.com/GetStream/webrtc-android) — alternatif stack WebRTC; belum diintegrasikan.
-- [Firebase Android Quickstarts](https://github.com/firebase/quickstart-android) — pola resmi Auth, FCM, dan Firestore.
-- [Whizzz-The-ChatApp](https://github.com/uditbhaskar/Whizzz-The-ChatApp) — referensi Clean Architecture/MVI dan Firebase.
-- [Element X Android](https://github.com/element-hq/element-x-android) dan [Signal Android](https://github.com/signalapp/Signal-Android) — referensi arsitektur saja karena AGPL-3.0.
-
-**Belum ada kode pihak ketiga yang disalin ke aplikasi.** Integrasi dilakukan selektif setelah pemeriksaan lisensi, dependency transitif, keamanan, ukuran APK, dan kompatibilitas. Repo AGPL, repo tanpa lisensi yang jelas, dan demo dengan backend palsu tidak digabungkan begitu saja.
-
-## Arsitektur dan teknologi
-
-- Android: Kotlin, Jetpack Compose, Coroutines/Flow, Room, Retrofit/OkHttp.
-- Autentikasi dan database realtime: Firebase Authentication dan Cloud Firestore.
-- Backend: Node.js, Express, Socket.IO, PostgreSQL, JWT, bcrypt.
-- Web client: HTML, CSS, dan JavaScript pada folder public/.
-- Media: rancangan integrasi penyimpanan kompatibel S3, misalnya Cloudflare R2.
-
-### Struktur repository
-
-| Path | Kegunaan |
-| --- | --- |
-| app/ | Aplikasi Android |
-| app/src/main/java/ | Source Kotlin |
-| app/src/test/ | Unit tests |
-| public/ | Web client |
-| server.js | Server Express dan Socket.IO |
-| schema.sql | Skema PostgreSQL |
-| gradle/libs.versions.toml | Katalog versi dependency Gradle |
-| .env.example | Template variabel lingkungan backend |
-| docs/FIREBASE_SETUP.md | Panduan Firebase dan catatan keamanan |
-| .github/workflows/ | Workflow CI/build APK |
-
-## Persyaratan pengembangan
-
-- Android Studio yang mendukung Android Gradle Plugin dan SDK proyek.
-- JDK 17 untuk workflow CI Android.
-- Android SDK platform/build tools API 36.
-- Node.js 18 atau versi yang didukung platform deployment.
-- npm dan PostgreSQL untuk backend.
-- Akun Firebase dengan izin mengatur Authentication dan Firestore untuk pengujian autentikasi/chat.
-
-## Konfigurasi Firebase
-
-Package Android yang harus didaftarkan:
+Package Android:
 
 ```text
 com.aistudio.chatin.kxqrvz
 ```
 
-Langkah konfigurasi:
+1. Pilih project Firebase yang dimiliki dan dikelola oleh pemilik aplikasi.
+2. Daftarkan aplikasi Android dengan package ID di atas.
+3. Unduh `google-services.json` untuk aplikasi yang tepat dan letakkan di `app/google-services.json`.
+4. Aktifkan **Authentication → Phone**.
+5. Atur kebijakan SMS region, kuota, dan nomor uji untuk development.
+6. Daftarkan SHA-1 dan SHA-256 untuk sertifikat debug/release yang digunakan.
+7. Siapkan Firestore dan validasi rules melalui Firebase Emulator Suite.
+8. Uji OTP pada perangkat fisik setelah seluruh konfigurasi benar.
 
-1. Buka [Firebase Console](https://console.firebase.google.com/).
-2. Pilih project Firebase yang memang Anda miliki/kelola. Konfigurasi repository saat ini menunjuk ke project ID chatin-43eed; pastikan project ini benar sebelum digunakan.
-3. Daftarkan aplikasi Android dengan package ID di atas.
-4. Unduh google-services.json untuk aplikasi yang tepat dan letakkan di app/google-services.json.
-5. Aktifkan Authentication → Sign-in method → Phone.
-6. Periksa kebijakan negara SMS, kuota SMS, dan nomor uji Firebase bila digunakan.
-7. Daftarkan SHA-1 dan SHA-256 untuk sertifikat debug/release sesuai kebutuhan Firebase.
-8. Siapkan Cloud Firestore dan gunakan Security Rules yang ketat.
-9. Uji autentikasi di perangkat fisik.
+Panduan lengkap: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md).
 
-Panduan lebih rinci: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md).
+> [!WARNING]
+> File `firestore.rules` saat ini merupakan scaffold deny-by-default. Akses `chats` dan `messages` sengaja ditolak sampai trusted chat creation, participant UID membership, dan validasi pesan selesai. Jangan mengganti aturan dengan `allow read, write: if request.auth != null` hanya untuk membuat chat tampak berfungsi.
 
-**Firestore rules scaffold:** [firestore.rules](firestore.rules) menolak akses chat sampai participant UID dan trusted message service tersedia. Deploy ini akan memblokir chat client saat ini; baca [Firestore Rules test plan](docs/FIRESTORE_RULES_TEST_PLAN.md) dan [panduan Firebase](docs/FIREBASE_SETUP.md) sebelum deployment. Jangan menonaktifkan aturan demi membuat chat tampak berjalan.
+## ✧ Roadmap pengembangan
 
-### Android build properties
+- [x] Menguatkan alur Firebase Phone Auth pada branch pengembangan.
+- [x] Validasi nomor telepon E.164 dan unit tests.
+- [x] Menyimpan identitas chat/pengirim pada antrean lokal Room.
+- [x] Menghapus destructive Room migration fallback agar kegagalan migrasi tidak diam-diam menghapus data.
+- [x] Menambahkan workflow Android Debug CI dan inspeksi sertifikat APK.
+- [x] Menambahkan dokumentasi audit keamanan dan Firebase setup.
+- [ ] Menyelesaikan Firebase UID profile migration dan siklus hidup autentikasi.
+- [ ] Menyelesaikan trusted chat creation, membership authorization, dan Firestore Emulator tests.
+- [ ] Membangun durable offline outbox worker dengan retry/backoff/idempotency.
+- [ ] Menyelesaikan FCM token lifecycle dan push notification.
+- [ ] Menyelesaikan upload/download media privat dengan validasi tipe, ukuran, dan izin.
+- [ ] Mengintegrasikan WebRTC dengan signaling, STUN/TURN, dan pengujian jaringan.
+- [ ] Mengintegrasikan protokol E2EE yang diaudit dan diuji interoperabilitasnya.
+- [ ] Menutup temuan keamanan backend, WebAuthn, TLS, PostgreSQL, dan otorisasi Socket.IO.
+- [ ] Menyelesaikan uji aksesibilitas, performa, stabilitas, dan kompatibilitas perangkat.
+- [ ] Menghasilkan APK Release bertanda tangan, memverifikasi SHA-256, dan memasang APK pada Assets Release.
+- [ ] Memperbarui tautan unduhan final dan checklist uji pengguna setelah seluruh gate lolos.
 
-Android Secrets Gradle Plugin membaca file properti dari root repository (bukan folder app): gunakan secrets.properties untuk nilai lokal rahasia (diabaikan Git) dan local.defaults.properties sebagai fallback yang masuk Git. File fallback menggunakan nilai sentinel NOT_CONFIGURED yang tidak kosong agar BuildConfig Java valid. Jangan menaruh key produksi di local.defaults.properties atau commit secrets.properties. File .env pada root tetap khusus konfigurasi backend Node.js.
+Lihat [roadmap engineering terperinci](docs/PRODUCT_ROADMAP.md).
 
-**Jangan pernah mengirim OTP, password, private key, file service-account JSON, atau kredensial rahasia melalui chat/issue.** Jangan mengaktifkan aturan Firestore publik seperti allow read, write: if true.
+## ✧ Keamanan dan privasi
 
-### Skema Firestore yang digunakan saat ini
-
-- users/{phoneNumber} — profil/presence lama; perlu migrasi ke UID.
-- chats/{chatId} — metadata percakapan.
-- chats/{chatId}/messages/{messageId} — dokumen pesan.
-
-Skema tersebut belum memenuhi seluruh kebutuhan keamanan produksi. Sebelum rilis, identitas pengguna harus konsisten menggunakan Firebase Auth UID, chat harus memiliki daftar memberUids yang tervalidasi, dan setiap operasi baca/tulis harus memeriksa keanggotaan.
-
-## Menjalankan backend
-
-Dari root repository:
-
-```bash
-cp .env.example .env
-npm install
-```
-
-Atur variabel berikut pada environment deployment. Jangan commit file .env.
-
-| Variabel | Fungsi |
-| --- | --- |
-| PORT | Port HTTP (default 3000) |
-| JWT_SECRET | Secret acak kuat, minimal 32 karakter |
-| URL_POSTGRESQL_CLOUD_ANDA | Connection string PostgreSQL |
-| ALLOWED_ORIGINS | Daftar origin web tepercaya, dipisahkan koma |
-| GEMINI_API_KEY | Opsional, proxy Gemini bila fitur dikonfigurasi |
-| S3_ENDPOINT | Endpoint storage S3-compatible |
-| S3_ACCESS_KEY_ID | Access key storage |
-| S3_SECRET_ACCESS_KEY | Secret key storage |
-| S3_BUCKET_NAME | Nama bucket media |
-
-Jalankan skema dan server:
-
-```bash
-psql "$URL_POSTGRESQL_CLOUD_ANDA" -f schema.sql
-npm start
-```
-
-Server memerlukan JWT_SECRET yang kuat. Gunakan HTTPS/TLS sebelum backend dibuka ke internet. Endpoint upload media dan OTP perubahan nomor belum boleh dianggap aktif sebelum provider sesungguhnya dikonfigurasi.
-
-## Menjalankan pemeriksaan dan test
-
-### Android
-
-```bash
-./gradlew :app:testDebugUnitTest
-./gradlew :app:assembleDebug
-```
-
-Workflow CI debug menjalankan unit test, build APK, pemeriksaan sertifikat APK, lalu upload artifact.
-
-### Backend
-
-```bash
-npm install
-node --check server.js
-npm start
-```
-
-Pemeriksaan sintaks atau build sukses tidak menggantikan integration test, Firebase Emulator Rules test, pengujian perangkat nyata, dan audit keamanan.
-
-## Checklist uji coba untuk pengguna
-
-Lakukan pengujian hanya setelah artifact APK berhasil dibuat dan diunduh.
-
-1. Instalasi: APK terpasang, aplikasi terbuka, tidak crash saat mulai.
-2. OTP benar: masukkan nomor dengan format internasional, misalnya +62...; pastikan SMS OTP diterima dan kode benar berhasil diverifikasi.
-3. OTP salah: kode salah atau kedaluwarsa harus ditolak.
-4. Sesi: tutup dan buka ulang aplikasi; periksa apakah sesi Firebase tetap sesuai kondisi autentikasi.
-5. Logout: logout, lalu pastikan layar/login state kembali dan sesi Firebase berakhir.
-6. Profil: periksa apakah nama/foto/profil tetap ada setelah aplikasi dibuka ulang.
-7. Pesan online: kirim pesan dan periksa status setelah Firestore mengonfirmasi.
-8. Jaringan terputus: catat apakah pesan gagal atau tetap PENDING. **Sinkronisasi otomatis pesan offline belum selesai**, jadi jangan menganggap pesan pending akan otomatis terkirim saat internet kembali.
-9. Stabilitas: coba pindah aplikasi, tutup paksa, dan buka ulang.
-10. Laporan: kirim model perangkat, versi Android, waktu kejadian, langkah reproduksi, screenshot/video, dan pesan error. Tutupi nomor telepon serta data pribadi.
-
-Jika OTP gagal, periksa project Firebase, package ID, SHA-1/SHA-256, Phone Authentication, kuota SMS, dan kebijakan negara. Jangan kirim OTP atau kredensial kepada siapa pun.
-
-## Roadmap sebelum rilis publik
-
-- [ ] Selesaikan dan review autentikasi Firebase; uji OTP pada perangkat nyata.
-- [ ] Migrasi dokumen pengguna ke Firebase Auth UID.
-- [ ] Terapkan memberUids dan Firestore Security Rules least-privilege.
-- [ ] Tambahkan Firebase Emulator Rules tests dan integration tests.
-- [ ] Selesaikan offline outbox, retry, idempotency, dan sinkronisasi background.
-- [ ] Selesaikan lifecycle token dan push notification FCM.
-- [ ] Implementasikan panggilan WebRTC sesungguhnya dengan signaling, ICE/STUN/TURN.
-- [ ] Rancang dan audit protokol E2EE; jangan membuat klaim E2EE sebelum selesai.
-- [ ] Selesaikan upload media privat, kontrol akses, dan kebijakan retensi.
-- [ ] Tambahkan pelaporan/blokir, privasi, penghapusan akun, dan kebijakan data.
-- [ ] Jalankan pengujian lintas perangkat, security review, dan uji beban backend.
-- [ ] Buat signed release, catatan rilis, dan distribusi resmi setelah seluruh gate terpenuhi.
-
-## Keamanan dan privasi
-
-- Jangan commit .env, JWT secret, SMS provider secret, kredensial S3, private signing key, keystore, password keystore, atau service-account private key.
-- Batasi Firebase API key ke aplikasi dan API yang diperlukan. Firebase client API key bukan pengganti Security Rules.
-- Jangan gunakan database Firestore dengan akses publik.
-- Pesan yang ditulis sebagai teks biasa **bukan E2EE**. Hindari data sensitif hingga arsitektur dan aturan keamanan selesai diaudit.
-- Sediakan HTTPS/TLS, pembatasan akses, validasi input, rate limiting, dan logging yang tidak membocorkan data pribadi.
+- Jangan commit `.env`, JWT secret, SMS provider credentials, S3 secret, private signing key, keystore, password keystore, atau Firebase service-account private key.
+- Firebase client API key bukan batas otorisasi; gunakan Firestore Security Rules dan App Check.
+- Pesan plaintext bukan E2EE. Jangan kirim data rahasia sampai protokol dan audit selesai.
+- Jangan deploy backend prototype ke produksi.
+- Jangan mempublikasikan screenshot yang memuat nomor telepon, OTP, token, pesan pribadi, atau informasi akun.
 - Laporkan kerentanan secara privat kepada pemilik repository.
 
-## Kontribusi dan pelaporan masalah
+Dokumen terkait:
+- [Backend security audit](docs/BACKEND_SECURITY_AUDIT.md)
+- [Firestore rules test plan](docs/FIRESTORE_RULES_TEST_PLAN.md)
+- [Firebase setup](docs/FIREBASE_SETUP.md)
+- [Open-source integration audit](docs/OPEN_SOURCE_AUDIT.md)
 
-Gunakan [Issues](https://github.com/adebojel/Chatin/issues) untuk bug atau usulan fitur. Sertakan langkah reproduksi, hasil yang diharapkan, hasil aktual, perangkat/versi Android, dan log yang sudah disensor. Jangan menyertakan OTP, password, token, nomor pribadi, atau data percakapan nyata.
+## ✧ Struktur repository
+
+| Path | Fungsi |
+|---|---|
+| `app/` | Android application |
+| `app/src/main/java/` | Kotlin source |
+| `app/src/test/` | Unit tests |
+| `public/` | Web client |
+| `server.js` | Backend prototype |
+| `schema.sql` | PostgreSQL schema |
+| `gradle/libs.versions.toml` | Dependency version catalog |
+| `docs/` | Engineering documentation and visual assets |
+| `.github/workflows/` | CI and APK workflows |
+
+## ✧ Kontribusi
+
+Gunakan [GitHub Issues](https://github.com/adebojel/Chatin/issues) untuk bug dan usulan. Sertakan langkah reproduksi, hasil yang diharapkan, hasil aktual, model perangkat, versi Android, dan log yang telah disensor. Jangan menyertakan OTP, password, token, nomor pribadi, atau isi percakapan nyata.
 
 ## Lisensi
 
-Periksa file LICENSE di repository. Jika belum tersedia, hak penggunaan ulang dan distribusi belum dinyatakan secara eksplisit.
+Periksa file `LICENSE` pada repository. Jika belum tersedia, hak penggunaan ulang dan distribusi belum dinyatakan secara eksplisit.
 
 ---
 
-**Repository:** [github.com/adebojel/Chatin](https://github.com/adebojel/Chatin)  
-**Build Android:** [GitHub Actions — Android Debug APK](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
-**Pull request pengembangan:** [PR #3](https://github.com/adebojel/Chatin/pull/3)  
-**Terakhir diperbarui:** 16 November 2026 (UTC+7).
+<div align="center">
 
+**CHATIN · BUILD WITH CARE. CONNECT WITH CONFIDENCE.**
 
-## Pembaruan antrean offline (15 November 2026)
-- Room versi 2 menambahkan `chatId` dan `firebaseSenderUid` pada pesan lokal agar identitas percakapan dan pengirim tidak hilang di antrean PENDING; migrasi dari versi 1 disediakan.
-- FirebaseManager sekarang mengembalikan error eksplisit saat Firestore tidak tersedia, bukan keluar diam-diam tanpa callback.
+[Repository](https://github.com/adebojel/Chatin) ·
+[Releases](https://github.com/adebojel/Chatin/releases) ·
+[Actions](https://github.com/adebojel/Chatin/actions) ·
+[Issues](https://github.com/adebojel/Chatin/issues)
+
+<sub>Dokumentasi mengikuti status branch pengembangan dan harus diperbarui kembali setelah setiap release tervalidasi.</sub>
+
+</div>
