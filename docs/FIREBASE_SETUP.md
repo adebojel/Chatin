@@ -86,7 +86,26 @@ service cloud.firestore {
 
 This is a deny-by-default migration scaffold, not a complete chat ruleset. Add narrowly scoped server/admin operations and validated client writes only after the data model is migrated. Test rules with the Firebase Emulator Suite before deployment.
 
-## 4. Firebase services expected by the product
+## 4. Firestore Rules yang tersimpan di repository
+
+Repository menyediakan `firebase.json` dan `firestore.rules` sebagai konfigurasi awal deny-by-default.
+
+- Profil hanya dapat dibaca/ditulis oleh pemilik UID yang cocok dengan Firebase Auth; nomor telepon harus cocok dengan claim Phone Auth.
+- Penghapusan profil dari klien ditolak.
+- Seluruh akses chat dan pesan sengaja ditolak sampai layanan tepercaya membuat chat dan menetapkan `memberUids`.
+- Koleksi yang belum didefinisikan juga ditolak.
+
+**Penting:** memasang rules ini akan memblokir jalur kirim/baca chat Android yang saat ini menulis langsung dari klien. Ini disengaja demi fail-closed security. Jangan deploy rules ke project aktif sebelum memahami dampaknya dan menyiapkan migrasi server-side. Jalankan Firebase Emulator Suite dan selesaikan [matriks pengujian rules](FIRESTORE_RULES_TEST_PLAN.md) terlebih dahulu.
+
+Untuk deployment setelah migrasi dan tes:
+```bash
+firebase emulators:start --only firestore
+firebase deploy --only firestore:rules
+```
+
+Perintah deploy hanya dilakukan oleh maintainer pada project yang benar setelah review dan uji emulator; jangan deploy ke project produksi saat chat service belum siap.
+
+## 5. Firebase services expected by the product
 
 | Service | Intended use | Current status in repository |
 | --- | --- | --- |
