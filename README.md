@@ -20,7 +20,7 @@ Baca [Audit Keamanan Backend](docs/BACKEND_SECURITY_AUDIT.md) sebelum menjalanka
 | Target SDK | API 36 |
 | Waktu pembaruan README | **16 November 2026** |
 | Branch pengembangan | feat/chatin-core-reliability |
-| Commit kode terakhir diperiksa | cf9c14c9a80e47ec2c95c4c06770cdb45ed25540 |
+| Commit branch terbaru saat dokumentasi diperbarui | 187252673b797452601f808b505a2e88a88215c9 |
 | Pull request | [PR #3 — Firebase phone verification & message reliability](https://github.com/adebojel/Chatin/pull/3) |
 
 ### Perubahan kode terbaru di branch pengembangan
@@ -40,7 +40,8 @@ Baca [Audit Keamanan Backend](docs/BACKEND_SECURITY_AUDIT.md) sebelum menjalanka
 
 ### Build uji coba (APK Debug)
 
-**[Buka workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)**
+**[Buka workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)**  
+**[Lihat hasil build Debug yang telah sukses (commit 35ac944)](https://github.com/adebojel/Chatin/actions/runs/43741987519)**
 
 Cara mengambil APK setelah workflow selesai:
 
@@ -60,7 +61,14 @@ Cara mengambil APK setelah workflow selesai:
 - Belum ada tautan Google Play Store atau rilis stabil.
 - Hanya instal APK dari repository resmi Chatin.
 
-### Membuat APK sendiri melalui Android Studio
+#
+## GitHub Releases — APK bertanda tangan
+
+Workflow rilis resmi tersedia di [Build and publish signed Chatin APK](https://github.com/adebojel/Chatin/actions/workflows/build-apk.yml). Workflow ini dijalankan manual dan memerlukan konfigurasi repository secrets berikut oleh pemilik repository: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, dan `KEY_PASSWORD`. Jangan pernah memasukkan nilai secret ke README, commit, issue, atau chat.
+
+Setelah secret tersedia, pemilik repository dapat menjalankan workflow dengan tag rilis unik (contoh beta), memeriksa unit test release, signature APK, SHA-256, lalu workflow akan mengunggah APK dan laporan signature ke GitHub Releases. **Saat ini belum ada GitHub Release APK yang dapat diunduh**; jangan menganggap artifact debug CI sebagai APK rilis bertanda tangan.
+
+## Membuat APK sendiri melalui Android Studio
 
 1. Pasang Android Studio dan Android SDK yang mendukung API 36.
 2. Clone repository:
@@ -82,6 +90,35 @@ Cara mengambil APK setelah workflow selesai:
 7. APK dihasilkan di app/build/outputs/apk/debug/app-debug.apk.
 
 Di Windows gunakan gradlew.bat sebagai pengganti ./gradlew.
+
+
+## Tampilan aplikasi dan materi visual
+
+> **Catatan transparansi:** repository saat ini berisi ikon launcher, tetapi belum berisi screenshot layar aplikasi yang diambil dari perangkat/emulator pada build tervalidasi. Ikon launcher bukan screenshot UI. Screenshot Inbox, percakapan, profil, panggilan, dan pengaturan akan ditambahkan setelah pengujian UI pada perangkat nyata agar README tidak menampilkan mockup atau gambar aplikasi lain seolah-olah Chatin.
+
+### Arsitektur sistem (ringkasan)
+
+```mermaid
+flowchart TD
+  A[Android App · Kotlin + Compose] --> B[Firebase Authentication]
+  A --> C[Cloud Firestore · current message path]
+  A --> D[Room · local pending queue]
+  A --> E[Backend API · prototype only]
+  E --> F[PostgreSQL]
+  E --> G[Socket.IO]
+  E --> H[Private media storage · not production-ready]
+  I[Future trusted Cloud Functions / API] -. authorization + membership required .-> C
+  I -. future FCM sender .-> A
+```
+
+Garis putus-putus menunjukkan komponen target yang belum selesai. Backend prototipe tidak boleh dipakai untuk data produksi.
+
+### Dokumentasi engineering
+
+- [Audit keamanan backend](docs/BACKEND_SECURITY_AUDIT.md)
+- [Audit integrasi dan riset repository open-source](docs/OPEN_SOURCE_AUDIT.md)
+- [Roadmap produk dan definisi selesai](docs/PRODUCT_ROADMAP.md)
+- [Panduan konfigurasi Firebase](docs/FIREBASE_SETUP.md)
 
 ## Fitur dan status implementasi
 
@@ -279,7 +316,7 @@ Periksa file LICENSE di repository. Jika belum tersedia, hak penggunaan ulang da
 **Repository:** [github.com/adebojel/Chatin](https://github.com/adebojel/Chatin)  
 **Build Android:** [GitHub Actions — Android Debug APK](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
 **Pull request pengembangan:** [PR #3](https://github.com/adebojel/Chatin/pull/3)  
-**Terakhir diperbarui:** 15 November 2026, 11:26 WIB (UTC+7).
+**Terakhir diperbarui:** 16 November 2026 (UTC+7).
 
 
 ## Pembaruan antrean offline (15 November 2026)
