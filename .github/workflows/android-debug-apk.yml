@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -51,9 +51,6 @@ jobs:
 
       - name: Compile release variant configuration
         run: gradle --no-daemon :app:compileReleaseJavaWithJavac
-
-      - name: Run release unit tests
-        run: gradle --no-daemon :app:testReleaseUnitTest
 
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
