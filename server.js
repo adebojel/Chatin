@@ -1,7 +1,7 @@
 /**
  * =====================================================================
- * CHATIN ENTERPRISE BACKEND SERVER (server.js)
- * Clean Architecture, High-Security E2EE, HTTPS & Socket.io Engine
+ * CHATIN BACKEND PROTOTYPE (server.js)
+ * Express API and Socket.IO foundation — NOT production-ready or E2EE
  * =====================================================================
  */
 
