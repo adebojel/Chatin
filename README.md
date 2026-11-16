@@ -237,6 +237,8 @@ Langkah konfigurasi:
 
 Panduan lebih rinci: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md).
 
+**Firestore rules scaffold:** [firestore.rules](firestore.rules) menolak akses chat sampai participant UID dan trusted message service tersedia. Deploy ini akan memblokir chat client saat ini; baca [Firestore Rules test plan](docs/FIRESTORE_RULES_TEST_PLAN.md) dan [panduan Firebase](docs/FIREBASE_SETUP.md) sebelum deployment. Jangan menonaktifkan aturan demi membuat chat tampak berjalan.
+
 ### Android build properties
 
 Android Secrets Gradle Plugin membaca file properti dari root repository (bukan folder app): gunakan secrets.properties untuk nilai lokal rahasia (diabaikan Git) dan local.defaults.properties sebagai fallback yang masuk Git. File fallback menggunakan nilai sentinel NOT_CONFIGURED yang tidak kosong agar BuildConfig Java valid. Jangan menaruh key produksi di local.defaults.properties atau commit secrets.properties. File .env pada root tetap khusus konfigurasi backend Node.js.
