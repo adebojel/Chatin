@@ -94,6 +94,8 @@ Cara mengambil APK setelah workflow selesai:
 #
 ## GitHub Releases — APK bertanda tangan
 
+**[Buka halaman unduhan Chatin — GitHub Releases](https://github.com/adebojel/Chatin/releases/latest)**. Tautan ini akan menampilkan APK pada bagian **Assets** setelah rilis pertama berhasil diterbitkan. Saat ini belum ada rilis yang dipublikasikan.
+
 Workflow rilis resmi tersedia di [Build and publish signed Chatin APK](https://github.com/adebojel/Chatin/actions/workflows/build-apk.yml). Workflow ini dijalankan manual dan memerlukan konfigurasi repository secrets berikut oleh pemilik repository: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, dan `KEY_PASSWORD`. Jangan pernah memasukkan nilai secret ke README, commit, issue, atau chat.
 
 Setelah secret tersedia, pemilik repository dapat menjalankan workflow dengan tag rilis unik (contoh beta), memeriksa unit test release, signature APK, SHA-256, lalu workflow akan mengunggah APK dan laporan signature ke GitHub Releases. **Saat ini belum ada GitHub Release APK yang dapat diunduh**; jangan menganggap artifact debug CI sebagai APK rilis bertanda tangan.
