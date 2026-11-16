@@ -70,8 +70,10 @@ Baca [Audit Keamanan Backend](docs/BACKEND_SECURITY_AUDIT.md) sebelum menjalanka
 
 ### Build uji coba (APK Debug)
 
-**[Unduh APK Debug terbaru — build dan unit test sukses (commit d0e3a47)](https://github.com/adebojel/Chatin/actions/runs/43805434473)** — artifact `chatin-debug-apk` tersedia pada bagian Artifacts (tersedia sampai 23 November 2026).\n\n[Semua workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
-**[Lihat detail build terbaru](https://github.com/adebojel/Chatin/actions/runs/43803067224)**
+**[Unduh APK Debug terbaru — build, unit test, dan kompilasi Release berhasil (commit d0e3a47)](https://github.com/adebojel/Chatin/actions/runs/43805434473)** — artifact `chatin-debug-apk` tersedia pada bagian Artifacts sampai 23 November 2026.  
+
+[Semua workflow build APK Chatin](https://github.com/adebojel/Chatin/actions/workflows/android-debug-apk.yml)  
+**[Lihat detail build terbaru](https://github.com/adebojel/Chatin/actions/runs/43805434473)**
 
 Cara mengambil APK setelah workflow selesai:
 
