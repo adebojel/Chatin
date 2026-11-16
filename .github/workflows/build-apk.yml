@@ -23,7 +23,8 @@ permissions:
 
 jobs:
   build-release:
-    name: Build, verify and publish signed APK
+    if: github.ref == 'refs/heads/main'
+    name: Build, verify and publish signed APK (main only)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
