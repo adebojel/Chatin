@@ -117,7 +117,7 @@ Perintah deploy hanya dilakukan oleh maintainer pada project yang benar setelah 
 
 Do not assume that adding a dependency alone activates a service.
 
-## 5. Operational checklist
+## 6. Operational checklist
 
 - [ ] Verify Firebase project ownership and billing/quotas.
 - [ ] Verify package name and signing fingerprints.
@@ -131,6 +131,6 @@ Do not assume that adding a dependency alone activates a service.
 - [ ] Review privacy notice, data retention, account deletion, and Indonesian personal-data obligations.
 - [ ] Run Android build, unit tests, integration tests, and real-device tests.
 
-## 6. Credentials and repository hygiene
+## 7. Credentials and repository hygiene
 
 Never commit `.env`, service-account JSON, private signing keys, keystore passwords, JWT secrets, SMS provider credentials, or S3 secret keys. The Android `google-services.json` contains client configuration rather than a server service-account private key, but its API key must still be restricted. If an unrestricted key has been exposed, rotate/restrict it in Google Cloud Console and review usage.
