@@ -52,6 +52,9 @@ jobs:
       - name: Compile release variant configuration
         run: gradle --no-daemon :app:compileReleaseJavaWithJavac
 
+      - name: Run release unit tests
+        run: gradle --no-daemon :app:testReleaseUnitTest
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
