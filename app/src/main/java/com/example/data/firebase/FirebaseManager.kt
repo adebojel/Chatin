@@ -100,7 +100,7 @@ object FirebaseManager {
                 verificationId: String,
                 token: PhoneAuthProvider.ForceResendingToken
             ) {
-                Log.d(TAG, "SMS OTP verification code sent to $phoneNumber.")
+                Log.d(TAG, "SMS OTP verification code sent.")
                 onCodeSent(verificationId)
             }
         }
